@@ -5,10 +5,16 @@ Reads players.csv live via book_value.py on every request (edit CSV -> refresh).
 
 Run:  py -3 app.py    then open http://localhost:5200
 """
+import os
 from flask import Flask, render_template_string, request, jsonify
 import book_value as bv
 
 app = Flask(__name__)
+
+# Public deployment (e.g. Fly.io) sets PUBLIC_MODE=1: the page renders in shared
+# mode (client-side what-ifs only) and the sale-price write endpoint is disabled,
+# so no visitor can alter the data. Locally it's unset → full editing.
+PUBLIC = os.environ.get("PUBLIC_MODE") == "1"
 
 PAGE = """
 <!doctype html>
@@ -357,12 +363,14 @@ def index():
     rows = bv.load_players()
     totals = bv.compute_totals(rows)
     return render_template_string(
-        PAGE, rows=rows, t=totals, today=bv.TODAY, rate=bv.EUR_GBP, static=False
+        PAGE, rows=rows, t=totals, today=bv.TODAY, rate=bv.EUR_GBP, static=PUBLIC
     )
 
 
 @app.route("/api/sale", methods=["POST"])
 def api_sale():
+    if PUBLIC:  # read-only public deployment — no server-side writes
+        return jsonify(error="Editing is disabled on the public site"), 403
     data = request.get_json(force=True)
     player = (data.get("player") or "").strip()
     price = (str(data.get("price") or "")).strip()
@@ -386,4 +394,4 @@ def api_sale():
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5200, debug=True)
+    app.run(host="127.0.0.1", port=int(os.environ.get("PORT", 5200)), debug=True)

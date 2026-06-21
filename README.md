@@ -23,6 +23,20 @@ py -3 app.py      # then open http://localhost:5200
 or just double-click `start_dashboard.bat`. The dashboard reads `players.csv`
 live on every request — edit the CSV and refresh the page to see changes.
 
+## Shareable public site
+Live at **https://thisismyback.github.io/spurs-book-value/** (GitHub Pages, repo
+`thisismyback/spurs-book-value`, served from `docs/`).
+
+`build_static.py` renders the same dashboard as a single self-contained
+`docs/index.html` in **shared mode**: data baked in, social/Twitter preview tags,
+and sale-price edits handled in-browser only (viewers can run what-ifs without
+touching `players.csv`). To update the public site after editing data:
+```
+py -3 build_static.py
+git add -A && git commit -m "update data" && git push
+```
+GitHub Pages redeploys automatically (~1 min).
+
 ## The accounting model
 A transfer fee is capitalized as an intangible asset and expensed evenly over the
 contract ("amortization"). The un-expensed remainder is the **Net Book Value**.

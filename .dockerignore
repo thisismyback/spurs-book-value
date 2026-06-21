@@ -1,0 +1,7 @@
+.git/
+__pycache__/
+*.pyc
+book_value_output.csv
+docs/
+dist/
+*.bat
