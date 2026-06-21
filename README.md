@@ -77,6 +77,15 @@ SOLD badge, the simulator, and the summary cards. Clear the cell to revert to
 market value. Edits persist; non-numeric input is rejected. The column is **GBP**;
 convert euro-quoted fees first. Example: Alejo Veliz `8` → +£2.3m (vs −£2.3m at €4m).
 
+### Shareable scenarios (public sites)
+On the public sites, visitors can type their own what-if sale prices and tick a
+Sell XI, then hit **🔗 Share my scenario** — their edits (sale prices + selections)
+are encoded into a `?s=` URL param (base64 JSON) and copied to the clipboard.
+Opening that link replays the scenario via `applyScenario()`, entirely client-side
+— no server writes, so no one can alter your canonical `players.csv`. A **Clear
+sale prices** button resets every sale price back to market value (works on the
+local app too, where it clears the saved values).
+
 ### Realized vs unrealized split
 The summary cards break total book profit into **Realized** (sum of book P/L for
 players with a sale price entered — locked in) and **Unrealized** (the rest, still
