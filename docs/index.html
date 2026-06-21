@@ -1,0 +1,1532 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spurs Squad Book Value — amortization & PSR tracker</title>
+<meta name="description" content="Net book value, amortization and book profit on sale for every Tottenham Hotspur player, with a Sell XI simulator and PSR headroom tracker.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Tottenham Hotspur — Squad Book Value">
+<meta property="og:description" content="Transfer-fee amortization & book profit for every Spurs player. Interactive Sell XI simulator + PSR headroom tracker.">
+<meta property="og:url" content="https://thisismyback.github.io/spurs-book-value/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Tottenham Hotspur — Squad Book Value">
+<meta name="twitter:description" content="Transfer-fee amortization & book profit for every Spurs player. Interactive Sell XI simulator + PSR headroom tracker.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%23132257'/><text x='50' y='70' font-size='58' text-anchor='middle' fill='white'>%C2%A3</text></svg>">
+<style>
+  :root{ --navy:#132257; --green:#16a34a; --red:#dc2626; --bg:#0f1424; --card:#1b2440; --line:#2a355c; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:#e8ecf5;padding-bottom:66px}
+  header{background:var(--navy);padding:20px 28px;border-bottom:3px solid #fff}
+  header h1{margin:0;font-size:20px;letter-spacing:.3px}
+  header .sub{opacity:.7;font-size:12px;margin-top:4px}
+  .wrap{padding:22px 28px;max-width:1180px;margin:0 auto}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:14px;margin-bottom:22px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .card .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.6px;opacity:.65}
+  .card .val{font-size:26px;font-weight:700;margin-top:6px}
+  .card .note{font-size:11px;opacity:.6;margin-top:4px}
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  th,td{padding:9px 12px;text-align:right;font-size:13px;border-bottom:1px solid var(--line)}
+  th{background:#202a4d;cursor:pointer;user-select:none;font-size:11px;text-transform:uppercase;letter-spacing:.5px;position:sticky;top:0}
+  th:hover{background:#27325c}
+  td.l,th.l{text-align:left}
+  tr:hover td{background:#222d52}
+  .pos{font-size:10px;background:#2a355c;border-radius:4px;padding:2px 6px;opacity:.85}
+  .pos{font-size:10px;background:#2a355c;border-radius:4px;padding:2px 6px}
+  .pl-pos{color:var(--green);font-weight:700}
+  .pl-neg{color:var(--red);font-weight:700}
+  .badge{font-size:9px;padding:1px 5px;border-radius:4px;margin-left:5px;vertical-align:middle}
+  .b-loan{background:#475569}
+  .b-acad{background:#7c3aed}
+  .b-ext{background:#0891b2}
+  .b-low{background:#b45309}
+  .b-out{background:#0d9488}
+  .b-sold{background:#15803d}
+  .saleinp{width:62px;background:#0f1424;border:1px solid var(--line);color:#e8ecf5;border-radius:5px;
+    padding:4px 6px;font-size:12px;text-align:right}
+  .saleinp:focus{outline:none;border-color:#15803d;background:#10241a}
+  .saleinp.has{border-color:#15803d;color:#4ade80}
+  .card.accent{border-color:#15803d}
+  .psr{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:15px 18px;margin-bottom:22px;
+    display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+  .psr .hd .t{font-size:11px;text-transform:uppercase;letter-spacing:.6px;opacity:.65}
+  .psr .hd .s{font-size:11px;opacity:.5;margin-top:3px}
+  .psr .grp{display:flex;flex-direction:column;gap:4px}
+  .psr .grp label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;opacity:.6}
+  .psr input{width:92px;background:#0f1424;border:1px solid var(--line);color:#e8ecf5;border-radius:6px;padding:7px 9px;font-size:14px;text-align:right}
+  .psr input:focus{outline:none;border-color:#15803d}
+  .psr .res{margin-left:auto;text-align:right}
+  .psr .res .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.4px;opacity:.6}
+  .psr .res .st{font-size:11px;opacity:.75;margin-top:2px}
+  .psr .barwrap{flex-basis:100%;height:8px;background:#2a355c;border-radius:4px;overflow:hidden;margin-top:6px}
+  .psr .barwrap>i{display:block;height:100%;background:var(--green);transition:width .2s}
+  .psr .claw{flex-basis:100%;font-size:11px;opacity:.6}
+  input[type=checkbox]{width:16px;height:16px;cursor:pointer}
+  tr.selrow td{background:#163a7a !important}
+  #salebar{position:fixed;left:0;right:0;bottom:0;background:#0b1020;border-top:2px solid #fff;
+    display:flex;align-items:center;gap:18px;padding:11px 28px;z-index:50;box-shadow:0 -4px 16px rgba(0,0,0,.5)}
+  #salebar .ttl{font-size:12px;text-transform:uppercase;letter-spacing:.5px;opacity:.7}
+  #salebar .cnt{font-size:20px;font-weight:700}
+  #salebar .warn{color:#f59e0b;font-size:12px;margin-left:6px}
+  #salebar .stats{display:flex;gap:26px;margin-left:auto;font-size:13px;align-items:center}
+  #salebar .stats .lab{opacity:.6;font-size:11px;display:block;text-transform:uppercase;letter-spacing:.4px}
+  #salebar .stats b{font-size:18px}
+  #salebar button{background:#33406b;color:#fff;border:0;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:12px}
+  #salebar button:hover{background:#3f4f82}
+  .bar{height:6px;background:#2a355c;border-radius:3px;overflow:hidden;width:80px;display:inline-block;vertical-align:middle}
+  .bar>i{display:block;height:100%;background:#f59e0b}
+  .muted{opacity:.4}
+  footer{padding:14px 28px;opacity:.5;font-size:11px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Tottenham Hotspur — Squad Book Value</h1>
+  <div class="sub">As of 2026-06-21 · figures in £m · market values = Transfermarkt €m × 0.86 ·
+    book profit = market value − net book value · loans excluded from totals</div>
+</header>
+<div class="wrap">
+  <div style="background:#1b2440;border:1px solid var(--line);border-radius:8px;
+    padding:9px 13px;font-size:12px;opacity:.85;margin-bottom:18px">
+    📎 Snapshot generated 2026-06-21. Type into the <b>Sale Price</b> column to run your own
+    what-ifs, tick the <b>Sell XI</b> boxes, and adjust the <b>PSR panel</b> — all changes stay
+    in your browser only, nothing is saved or shared.</div>
+  <div class="cards">
+    <div class="card"><div class="lbl">Acquisition cost</div><div class="val">£742.6m</div>
+      <div class="note">already amortized £339.2m</div></div>
+    <div class="card"><div class="lbl">Remaining book value</div><div class="val">£403.4m</div>
+      <div class="note">un-amortized fees on the books</div></div>
+    <div class="card"><div class="lbl">Squad market value</div><div class="val">£660.5m</div>
+      <div class="note">Transfermarkt, owned + academy</div></div>
+    <div class="card"><div class="lbl">Total book profit</div>
+      <div class="val pl-pos" id="card-bp">£283.9m</div>
+      <div class="note">realized + unrealized</div></div>
+    <div class="card accent"><div class="lbl">Realized (agreed sales)</div>
+      <div class="val pl-pos" id="card-real">£177.6m</div>
+      <div class="note">locked in via SOLD prices</div></div>
+    <div class="card"><div class="lbl">Unrealized (at market)</div>
+      <div class="val pl-pos" id="card-unreal">£106.3m</div>
+      <div class="note">still hypothetical, Transfermarkt</div></div>
+  </div>
+
+  <div class="psr">
+    <div class="hd"><div class="t">PSR / FFP headroom</div>
+      <div class="s">3-year rolling allowable-loss model · simplified</div></div>
+    <div class="grp"><label>Allowable 3-yr loss (£m)</label>
+      <input id="psr-limit" type="number" step="5" value="105" oninput="updatePSR()"></div>
+    <div class="grp"><label>Assumed 3-yr loss pre-sales (£m)</label>
+      <input id="psr-loss" type="number" step="5" value="0" oninput="updatePSR()"></div>
+    <div class="grp"><label>Realized sale profit</label>
+      <div class="val pl-pos" id="psr-realized" style="font-size:20px">£0.0m</div></div>
+    <div class="res"><div class="lbl">Net PSR headroom</div>
+      <div class="val" id="psr-headroom" style="font-size:26px">£0.0m</div>
+      <div class="st" id="psr-status">—</div></div>
+    <div class="barwrap"><i id="psr-bar" style="width:0%"></i></div>
+    <div class="claw" id="psr-claw">Enter your estimated 3-yr operating loss to see net headroom.
+      Realized sale profit offsets losses £-for-£.</div>
+  </div>
+
+  <table id="t">
+    <thead><tr>
+      <th title="Tick to add to the sale simulator">Sell</th>
+      <th class="l" onclick="sortBy(1,true)">Player</th>
+      <th class="l" onclick="sortBy(2,true)">Pos</th>
+      <th onclick="sortBy(3,false)">Fee</th>
+      <th onclick="sortBy(4,false)">% Amort</th>
+      <th onclick="sortBy(5,false)">Net Book Value</th>
+      <th onclick="sortBy(6,false)">Market Value</th>
+      <th onclick="sortBy(7,false)" title="Agreed/actual sale price — overrides market value in Book P/L">Sale Price</th>
+      <th onclick="sortBy(8,false)">Book P/L</th>
+    </tr></thead>
+    <tbody>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="45.3"
+                data-mv="55.0"
+                data-nbv="9.7"></td>
+        
+        <td class="l">Luka Vuskovic
+          <span class="badge b-sold" title="Agreed/actual sale price entered — used for Book P/L">SOLD £55.0m</span>
+          <span class="badge b-out" title="Spurs player out on loan at Hamburger SV">LOAN&rarr; Hamburger SV</span>
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">CB</span></td>
+        
+          <td data-v="12.0">£12.0m</td>
+          <td data-v="19.0">
+            <span class="bar"><i style="width:19.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 19%</span>
+          </td>
+          <td data-v="9.7">£9.7m</td>
+          <td data-v="51.6">£51.6m</td>
+          <td data-v="55.0">
+            <input class="saleinp has" type="number" step="0.5" min="0"
+              value="55.0" placeholder="—" data-player="Luka Vuskovic"
+              data-nbv="9.7" data-market="51.6" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="45.3" class="pl-pos">
+            +£45.3m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="39.9"
+                data-mv="45.0"
+                data-nbv="5.1"></td>
+        
+        <td class="l">Lucas Bergvall
+          <span class="badge b-sold" title="Agreed/actual sale price entered — used for Book P/L">SOLD £45.0m</span>
+          
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">CM</span></td>
+        
+          <td data-v="8.5">£8.5m</td>
+          <td data-v="39.0">
+            <span class="bar"><i style="width:39.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 39%</span>
+          </td>
+          <td data-v="5.1">£5.1m</td>
+          <td data-v="30.1">£30.1m</td>
+          <td data-v="45.0">
+            <input class="saleinp has" type="number" step="0.5" min="0"
+              value="45.0" placeholder="—" data-player="Lucas Bergvall"
+              data-nbv="5.1" data-market="30.1" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="39.9" class="pl-pos">
+            +£39.9m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="27.5"
+                data-mv="40.0"
+                data-nbv="12.5"></td>
+        
+        <td class="l">Cristian Romero
+          <span class="badge b-sold" title="Agreed/actual sale price entered — used for Book P/L">SOLD £40.0m</span>
+          
+          <span class="badge b-ext" title="Contract extension modelled — schedule reset">EXT</span>
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">CB</span></td>
+        
+          <td data-v="42.0">£42.0m</td>
+          <td data-v="70.0">
+            <span class="bar"><i style="width:70.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 70%</span>
+          </td>
+          <td data-v="12.5">£12.5m</td>
+          <td data-v="38.7">£38.7m</td>
+          <td data-v="40.0">
+            <input class="saleinp has" type="number" step="0.5" min="0"
+              value="40.0" placeholder="—" data-player="Cristian Romero"
+              data-nbv="12.5" data-market="38.7" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="27.5" class="pl-pos">
+            +£27.5m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="26.2"
+                data-mv="30.0"
+                data-nbv="3.8"></td>
+        
+        <td class="l">Pape Matar Sarr
+          <span class="badge b-sold" title="Agreed/actual sale price entered — used for Book P/L">SOLD £30.0m</span>
+          
+          <span class="badge b-ext" title="Contract extension modelled — schedule reset">EXT</span>
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">CM</span></td>
+        
+          <td data-v="14.6">£14.6m</td>
+          <td data-v="74.0">
+            <span class="bar"><i style="width:74.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 74%</span>
+          </td>
+          <td data-v="3.8">£3.8m</td>
+          <td data-v="25.8">£25.8m</td>
+          <td data-v="30.0">
+            <input class="saleinp has" type="number" step="0.5" min="0"
+              value="30.0" placeholder="—" data-player="Pape Matar Sarr"
+              data-nbv="3.8" data-market="25.8" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="26.2" class="pl-pos">
+            +£26.2m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="24.7"
+                data-mv="43.0"
+                data-nbv="18.3"></td>
+        
+        <td class="l">Micky van de Ven
+          
+          
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">CB</span></td>
+        
+          <td data-v="43.0">£43.0m</td>
+          <td data-v="57.0">
+            <span class="bar"><i style="width:57.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 57%</span>
+          </td>
+          <td data-v="18.3">£18.3m</td>
+          <td data-v="43.0">£43.0m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Micky van de Ven"
+              data-nbv="18.3" data-market="43.0" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="24.7" class="pl-pos">
+            +£24.7m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="23.1"
+                data-mv="25.8"
+                data-nbv="2.7"></td>
+        
+        <td class="l">Djed Spence
+          
+          
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">LB</span></td>
+        
+          <td data-v="12.5">£12.5m</td>
+          <td data-v="78.0">
+            <span class="bar"><i style="width:78.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 78%</span>
+          </td>
+          <td data-v="2.7">£2.7m</td>
+          <td data-v="25.8">£25.8m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Djed Spence"
+              data-nbv="2.7" data-market="25.8" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="23.1" class="pl-pos">
+            +£23.1m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="20.3"
+                data-mv="25.8"
+                data-nbv="5.5"></td>
+        
+        <td class="l">Destiny Udogie
+          
+          
+          <span class="badge b-ext" title="Contract extension modelled — schedule reset">EXT</span>
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">LB</span></td>
+        
+          <td data-v="15.0">£15.0m</td>
+          <td data-v="64.0">
+            <span class="bar"><i style="width:64.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 64%</span>
+          </td>
+          <td data-v="5.5">£5.5m</td>
+          <td data-v="25.8">£25.8m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Destiny Udogie"
+              data-nbv="5.5" data-market="25.8" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="20.3" class="pl-pos">
+            +£20.3m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="15.5"
+                data-mv="15.5"
+                data-nbv="0.0"></td>
+        
+        <td class="l">Mikey Moore
+          
+          <span class="badge b-out" title="Spurs player out on loan at Rangers FC">LOAN&rarr; Rangers FC</span>
+          
+          <span class="badge b-acad" title="Academy product — zero acquisition cost">ACAD</span>
+          
+          
+        </td>
+        <td class="l"><span class="pos">LW</span></td>
+        
+          <td data-v="0.0">£0.0m</td>
+          <td data-v="100.0">
+            <span class="bar"><i style="width:100.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 100%</span>
+          </td>
+          <td data-v="0.0">£0.0m</td>
+          <td data-v="15.5">£15.5m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Mikey Moore"
+              data-nbv="0.0" data-market="15.5" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="15.5" class="pl-pos">
+            +£15.5m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="14.9"
+                data-mv="17.2"
+                data-nbv="2.3"></td>
+        
+        <td class="l">Rodrigo Bentancur
+          
+          
+          <span class="badge b-ext" title="Contract extension modelled — schedule reset">EXT</span>
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">DM</span></td>
+        
+          <td data-v="17.0">£17.0m</td>
+          <td data-v="86.0">
+            <span class="bar"><i style="width:86.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 86%</span>
+          </td>
+          <td data-v="2.3">£2.3m</td>
+          <td data-v="17.2">£17.2m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Rodrigo Bentancur"
+              data-nbv="2.3" data-market="17.2" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="14.9" class="pl-pos">
+            +£14.9m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="12.6"
+                data-mv="30.1"
+                data-nbv="17.5"></td>
+        
+        <td class="l">Pedro Porro
+          
+          
+          <span class="badge b-ext" title="Contract extension modelled — schedule reset">EXT</span>
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">RB</span></td>
+        
+          <td data-v="40.0">£40.0m</td>
+          <td data-v="56.0">
+            <span class="bar"><i style="width:56.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 56%</span>
+          </td>
+          <td data-v="17.5">£17.5m</td>
+          <td data-v="30.1">£30.1m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Pedro Porro"
+              data-nbv="17.5" data-market="30.1" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="12.6" class="pl-pos">
+            +£12.6m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="11.9"
+                data-mv="30.1"
+                data-nbv="18.2"></td>
+        
+        <td class="l">Archie Gray
+          
+          
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">CM</span></td>
+        
+          <td data-v="30.0">£30.0m</td>
+          <td data-v="39.0">
+            <span class="bar"><i style="width:39.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 39%</span>
+          </td>
+          <td data-v="18.2">£18.2m</td>
+          <td data-v="30.1">£30.1m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Archie Gray"
+              data-nbv="18.2" data-market="30.1" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="11.9" class="pl-pos">
+            +£11.9m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="9.0"
+                data-mv="16.0"
+                data-nbv="7.0"></td>
+        
+        <td class="l">Guglielmo Vicario
+          <span class="badge b-sold" title="Agreed/actual sale price entered — used for Book P/L">SOLD £16.0m</span>
+          
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">GK</span></td>
+        
+          <td data-v="17.2">£17.2m</td>
+          <td data-v="59.0">
+            <span class="bar"><i style="width:59.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 59%</span>
+          </td>
+          <td data-v="7.0">£7.0m</td>
+          <td data-v="15.5">£15.5m</td>
+          <td data-v="16.0">
+            <input class="saleinp has" type="number" step="0.5" min="0"
+              value="16.0" placeholder="—" data-player="Guglielmo Vicario"
+              data-nbv="7.0" data-market="15.5" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="9.0" class="pl-pos">
+            +£9.0m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="6.5"
+                data-mv="6.5"
+                data-nbv="0.0"></td>
+        
+        <td class="l">Alfie Devine
+          <span class="badge b-sold" title="Agreed/actual sale price entered — used for Book P/L">SOLD £6.5m</span>
+          <span class="badge b-out" title="Spurs player out on loan at Preston North End">LOAN&rarr; Preston North End</span>
+          
+          <span class="badge b-acad" title="Academy product — zero acquisition cost">ACAD</span>
+          
+          <span class="badge b-low" title="Low-confidence input — verify">?</span>
+        </td>
+        <td class="l"><span class="pos">AM</span></td>
+        
+          <td data-v="0.0">£0.0m</td>
+          <td data-v="100.0">
+            <span class="bar"><i style="width:100.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 100%</span>
+          </td>
+          <td data-v="0.0">£0.0m</td>
+          <td data-v="6.9">£6.9m</td>
+          <td data-v="6.5">
+            <input class="saleinp has" type="number" step="0.5" min="0"
+              value="6.5" placeholder="—" data-player="Alfie Devine"
+              data-nbv="0.0" data-market="6.9" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="6.5" class="pl-pos">
+            +£6.5m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="6.0"
+                data-mv="6.0"
+                data-nbv="0.0"></td>
+        
+        <td class="l">Will Lankshear
+          
+          <span class="badge b-out" title="Spurs player out on loan at Oxford United">LOAN&rarr; Oxford United</span>
+          
+          <span class="badge b-acad" title="Academy product — zero acquisition cost">ACAD</span>
+          
+          
+        </td>
+        <td class="l"><span class="pos">CF</span></td>
+        
+          <td data-v="0.0">£0.0m</td>
+          <td data-v="100.0">
+            <span class="bar"><i style="width:100.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 100%</span>
+          </td>
+          <td data-v="0.0">£0.0m</td>
+          <td data-v="6.0">£6.0m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Will Lankshear"
+              data-nbv="0.0" data-market="6.0" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="6.0" class="pl-pos">
+            +£6.0m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="5.7"
+                data-mv="18.0"
+                data-nbv="12.3"></td>
+        
+        <td class="l">Richarlison
+          <span class="badge b-sold" title="Agreed/actual sale price entered — used for Book P/L">SOLD £18.0m</span>
+          
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">CF</span></td>
+        
+          <td data-v="60.0">£60.0m</td>
+          <td data-v="80.0">
+            <span class="bar"><i style="width:80.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 80%</span>
+          </td>
+          <td data-v="12.3">£12.3m</td>
+          <td data-v="21.5">£21.5m</td>
+          <td data-v="18.0">
+            <input class="saleinp has" type="number" step="0.5" min="0"
+              value="18.0" placeholder="—" data-player="Richarlison"
+              data-nbv="12.3" data-market="21.5" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="5.7" class="pl-pos">
+            +£5.7m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="5.0"
+                data-mv="5.0"
+                data-nbv="0.0"></td>
+        
+        <td class="l">Manor Solomon
+          <span class="badge b-sold" title="Agreed/actual sale price entered — used for Book P/L">SOLD £5.0m</span>
+          <span class="badge b-out" title="Spurs player out on loan at ACF Fiorentina">LOAN&rarr; ACF Fiorentina</span>
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">LW</span></td>
+        
+          <td data-v="0.0">£0.0m</td>
+          <td data-v="100.0">
+            <span class="bar"><i style="width:100.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 100%</span>
+          </td>
+          <td data-v="0.0">£0.0m</td>
+          <td data-v="6.9">£6.9m</td>
+          <td data-v="5.0">
+            <input class="saleinp has" type="number" step="0.5" min="0"
+              value="5.0" placeholder="—" data-player="Manor Solomon"
+              data-nbv="0.0" data-market="6.9" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="5.0" class="pl-pos">
+            +£5.0m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="4.4"
+                data-mv="5.0"
+                data-nbv="0.6"></td>
+        
+        <td class="l">Ashley Phillips
+          <span class="badge b-sold" title="Agreed/actual sale price entered — used for Book P/L">SOLD £5.0m</span>
+          <span class="badge b-out" title="Spurs player out on loan at Stoke City">LOAN&rarr; Stoke City</span>
+          
+          
+          
+          <span class="badge b-low" title="Low-confidence input — verify">?</span>
+        </td>
+        <td class="l"><span class="pos">CB</span></td>
+        
+          <td data-v="1.5">£1.5m</td>
+          <td data-v="59.0">
+            <span class="bar"><i style="width:59.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 59%</span>
+          </td>
+          <td data-v="0.6">£0.6m</td>
+          <td data-v="6.0">£6.0m</td>
+          <td data-v="5.0">
+            <input class="saleinp has" type="number" step="0.5" min="0"
+              value="5.0" placeholder="—" data-player="Ashley Phillips"
+              data-nbv="0.6" data-market="6.0" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="4.4" class="pl-pos">
+            +£4.4m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="4.3"
+                data-mv="18.0"
+                data-nbv="13.7"></td>
+        
+        <td class="l">Radu Dragusin
+          <span class="badge b-sold" title="Agreed/actual sale price entered — used for Book P/L">SOLD £18.0m</span>
+          
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">CB</span></td>
+        
+          <td data-v="26.7">£26.7m</td>
+          <td data-v="49.0">
+            <span class="bar"><i style="width:49.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 49%</span>
+          </td>
+          <td data-v="13.7">£13.7m</td>
+          <td data-v="13.8">£13.8m</td>
+          <td data-v="18.0">
+            <input class="saleinp has" type="number" step="0.5" min="0"
+              value="18.0" placeholder="—" data-player="Radu Dragusin"
+              data-nbv="13.7" data-market="13.8" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="4.3" class="pl-pos">
+            +£4.3m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="4.2"
+                data-mv="14.6"
+                data-nbv="10.5"></td>
+        
+        <td class="l">Dejan Kulusevski
+          
+          
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">AM</span></td>
+        
+          <td data-v="25.8">£25.8m</td>
+          <td data-v="59.0">
+            <span class="bar"><i style="width:59.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 59%</span>
+          </td>
+          <td data-v="10.5">£10.5m</td>
+          <td data-v="14.6">£14.6m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Dejan Kulusevski"
+              data-nbv="10.5" data-market="14.6" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="4.2" class="pl-pos">
+            +£4.2m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="4.0"
+                data-mv="12.9"
+                data-nbv="8.9"></td>
+        
+        <td class="l">Antonin Kinsky
+          
+          
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">GK</span></td>
+        
+          <td data-v="12.5">£12.5m</td>
+          <td data-v="29.0">
+            <span class="bar"><i style="width:29.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 29%</span>
+          </td>
+          <td data-v="8.9">£8.9m</td>
+          <td data-v="12.9">£12.9m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Antonin Kinsky"
+              data-nbv="8.9" data-market="12.9" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="4.0" class="pl-pos">
+            +£4.0m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="2.6"
+                data-mv="2.6"
+                data-nbv="0.0"></td>
+        
+        <td class="l">Ben Davies
+          
+          
+          
+          
+          
+          <span class="badge b-low" title="Low-confidence input — verify">?</span>
+        </td>
+        <td class="l"><span class="pos">CB</span></td>
+        
+          <td data-v="10.0">£10.0m</td>
+          <td data-v="100.0">
+            <span class="bar"><i style="width:100.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 100%</span>
+          </td>
+          <td data-v="0.0">£0.0m</td>
+          <td data-v="2.6">£2.6m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Ben Davies"
+              data-nbv="0.0" data-market="2.6" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="2.6" class="pl-pos">
+            +£2.6m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="2.3"
+                data-mv="8.0"
+                data-nbv="5.7"></td>
+        
+        <td class="l">Alejo Veliz
+          <span class="badge b-sold" title="Agreed/actual sale price entered — used for Book P/L">SOLD £8.0m</span>
+          <span class="badge b-out" title="Spurs player out on loan at Rosario Central">LOAN&rarr; Rosario Central</span>
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">CF</span></td>
+        
+          <td data-v="13.0">£13.0m</td>
+          <td data-v="56.0">
+            <span class="bar"><i style="width:56.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 56%</span>
+          </td>
+          <td data-v="5.7">£5.7m</td>
+          <td data-v="3.4">£3.4m</td>
+          <td data-v="8.0">
+            <input class="saleinp has" type="number" step="0.5" min="0"
+              value="8.0" placeholder="—" data-player="Alejo Veliz"
+              data-nbv="5.7" data-market="3.4" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="2.3" class="pl-pos">
+            +£2.3m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="1.5"
+                data-mv="1.5"
+                data-nbv="0.0"></td>
+        
+        <td class="l">Dane Scarlett
+          <span class="badge b-sold" title="Agreed/actual sale price entered — used for Book P/L">SOLD £1.5m</span>
+          <span class="badge b-out" title="Spurs player out on loan at Hibernian FC">LOAN&rarr; Hibernian FC</span>
+          
+          <span class="badge b-acad" title="Academy product — zero acquisition cost">ACAD</span>
+          
+          
+        </td>
+        <td class="l"><span class="pos">CF</span></td>
+        
+          <td data-v="0.0">£0.0m</td>
+          <td data-v="100.0">
+            <span class="bar"><i style="width:100.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 100%</span>
+          </td>
+          <td data-v="0.0">£0.0m</td>
+          <td data-v="1.3">£1.3m</td>
+          <td data-v="1.5">
+            <input class="saleinp has" type="number" step="0.5" min="0"
+              value="1.5" placeholder="—" data-player="Dane Scarlett"
+              data-nbv="0.0" data-market="1.3" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="1.5" class="pl-pos">
+            +£1.5m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="1.0"
+                data-mv="17.2"
+                data-nbv="16.2"></td>
+        
+        <td class="l">James Maddison
+          
+          
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">AM</span></td>
+        
+          <td data-v="40.0">£40.0m</td>
+          <td data-v="59.0">
+            <span class="bar"><i style="width:59.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 59%</span>
+          </td>
+          <td data-v="16.2">£16.2m</td>
+          <td data-v="17.2">£17.2m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="James Maddison"
+              data-nbv="16.2" data-market="17.2" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="1.0" class="pl-pos">
+            +£1.0m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="0.4"
+                data-mv="0.4"
+                data-nbv="0.0"></td>
+        
+        <td class="l">Brandon Austin
+          
+          
+          
+          <span class="badge b-acad" title="Academy product — zero acquisition cost">ACAD</span>
+          
+          
+        </td>
+        <td class="l"><span class="pos">GK</span></td>
+        
+          <td data-v="0.0">£0.0m</td>
+          <td data-v="100.0">
+            <span class="bar"><i style="width:100.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 100%</span>
+          </td>
+          <td data-v="0.0">£0.0m</td>
+          <td data-v="0.4">£0.4m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Brandon Austin"
+              data-nbv="0.0" data-market="0.4" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="0.4" class="pl-pos">
+            +£0.4m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="0.4"
+                data-mv="17.2"
+                data-nbv="16.8"></td>
+        
+        <td class="l">Kevin Danso
+          
+          
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">CB</span></td>
+        
+          <td data-v="20.9">£20.9m</td>
+          <td data-v="19.0">
+            <span class="bar"><i style="width:19.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 19%</span>
+          </td>
+          <td data-v="16.8">£16.8m</td>
+          <td data-v="17.2">£17.2m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Kevin Danso"
+              data-nbv="16.8" data-market="17.2" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="0.4" class="pl-pos">
+            +£0.4m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="0.3"
+                data-mv="4.3"
+                data-nbv="4.0"></td>
+        
+        <td class="l">Kota Takai
+          
+          <span class="badge b-out" title="Spurs player out on loan at Borussia Monchengladbach">LOAN&rarr; Borussia Monchengladbach</span>
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">CB</span></td>
+        
+          <td data-v="5.0">£5.0m</td>
+          <td data-v="19.0">
+            <span class="bar"><i style="width:19.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 19%</span>
+          </td>
+          <td data-v="4.0">£4.0m</td>
+          <td data-v="4.3">£4.3m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Kota Takai"
+              data-nbv="4.0" data-market="4.3" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="0.3" class="pl-pos">
+            +£0.3m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="0.2"
+                data-mv="2.6"
+                data-nbv="2.4"></td>
+        
+        <td class="l">Yang Min-hyeok
+          
+          <span class="badge b-out" title="Spurs player out on loan at Coventry City">LOAN&rarr; Coventry City</span>
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">RW</span></td>
+        
+          <td data-v="3.4">£3.4m</td>
+          <td data-v="29.0">
+            <span class="bar"><i style="width:29.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 29%</span>
+          </td>
+          <td data-v="2.4">£2.4m</td>
+          <td data-v="2.6">£2.6m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Yang Min-hyeok"
+              data-nbv="2.4" data-market="2.6" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="0.2" class="pl-pos">
+            +£0.2m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="-0.0"
+                data-mv="15.5"
+                data-nbv="15.5"></td>
+        
+        <td class="l">Wilson Odobert
+          
+          
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">LW</span></td>
+        
+          <td data-v="25.0">£25.0m</td>
+          <td data-v="38.0">
+            <span class="bar"><i style="width:38.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 38%</span>
+          </td>
+          <td data-v="15.5">£15.5m</td>
+          <td data-v="15.5">£15.5m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Wilson Odobert"
+              data-nbv="15.5" data-market="15.5" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="-0.0" class="pl-pos">
+            +£-0.0m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="-0.7"
+                data-mv="10.3"
+                data-nbv="11.0"></td>
+        
+        <td class="l">Souza
+          
+          
+          
+          
+          
+          <span class="badge b-low" title="Low-confidence input — verify">?</span>
+        </td>
+        <td class="l"><span class="pos">LB</span></td>
+        
+          <td data-v="12.0">£12.0m</td>
+          <td data-v="8.0">
+            <span class="bar"><i style="width:8.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 8%</span>
+          </td>
+          <td data-v="11.0">£11.0m</td>
+          <td data-v="10.3">£10.3m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Souza"
+              data-nbv="11.0" data-market="10.3" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="-0.7" class="pl-neg">
+            £-0.7m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="-1.6"
+                data-mv="43.0"
+                data-nbv="44.6"></td>
+        
+        <td class="l">Mohammed Kudus
+          
+          
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">RW</span></td>
+        
+          <td data-v="55.0">£55.0m</td>
+          <td data-v="19.0">
+            <span class="bar"><i style="width:19.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 19%</span>
+          </td>
+          <td data-v="44.6">£44.6m</td>
+          <td data-v="43.0">£43.0m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Mohammed Kudus"
+              data-nbv="44.6" data-market="43.0" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="-1.6" class="pl-neg">
+            £-1.6m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="-3.5"
+                data-mv="27.5"
+                data-nbv="31.1"></td>
+        
+        <td class="l">Conor Gallagher
+          
+          
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">CM</span></td>
+        
+          <td data-v="34.0">£34.0m</td>
+          <td data-v="9.0">
+            <span class="bar"><i style="width:9.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 9%</span>
+          </td>
+          <td data-v="31.1">£31.1m</td>
+          <td data-v="27.5">£27.5m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Conor Gallagher"
+              data-nbv="31.1" data-market="27.5" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="-3.5" class="pl-neg">
+            £-3.5m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="-5.2"
+                data-mv="18.9"
+                data-nbv="24.2"></td>
+        
+        <td class="l">Mathys Tel
+          
+          
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">CF</span></td>
+        
+          <td data-v="30.0">£30.0m</td>
+          <td data-v="19.0">
+            <span class="bar"><i style="width:19.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 19%</span>
+          </td>
+          <td data-v="24.2">£24.2m</td>
+          <td data-v="18.9">£18.9m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Mathys Tel"
+              data-nbv="24.2" data-market="18.9" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="-5.2" class="pl-neg">
+            £-5.2m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="-8.1"
+                data-mv="34.4"
+                data-nbv="42.5"></td>
+        
+        <td class="l">Xavi Simons
+          
+          
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">AM</span></td>
+        
+          <td data-v="51.0">£51.0m</td>
+          <td data-v="17.0">
+            <span class="bar"><i style="width:17.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 17%</span>
+          </td>
+          <td data-v="42.5">£42.5m</td>
+          <td data-v="34.4">£34.4m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Xavi Simons"
+              data-nbv="42.5" data-market="34.4" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="-8.1" class="pl-neg">
+            £-8.1m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td><input type="checkbox" class="sel" onchange="recalc(this)"
+                data-bp="-16.7"
+                data-mv="24.1"
+                data-nbv="40.8"></td>
+        
+        <td class="l">Dominic Solanke
+          
+          
+          
+          
+          
+          
+        </td>
+        <td class="l"><span class="pos">CF</span></td>
+        
+          <td data-v="65.0">£65.0m</td>
+          <td data-v="37.0">
+            <span class="bar"><i style="width:37.0%"></i></span>
+            <span style="font-size:11px;opacity:.7"> 37%</span>
+          </td>
+          <td data-v="40.8">£40.8m</td>
+          <td data-v="24.1">£24.1m</td>
+          <td data-v="-1">
+            <input class="saleinp" type="number" step="0.5" min="0"
+              value="" placeholder="—" data-player="Dominic Solanke"
+              data-nbv="40.8" data-market="24.1" onchange="saveSale(this)"
+              title="Try a what-if sale price (£m) — local only, not saved"></td>
+          <td data-v="-16.7" class="pl-neg">
+            £-16.7m</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td title="Loaned in — not ours to sell"></td>
+        
+        <td class="l">Joao Palhinha
+          
+          
+          
+          
+          <span class="badge b-loan" title="Loaned in — no asset capitalized">LOAN-IN</span>
+          
+        </td>
+        <td class="l"><span class="pos">DM</span></td>
+        
+          <td class="muted" data-v="-1">loan</td>
+          <td class="muted" data-v="-1">—</td>
+          <td class="muted" data-v="-1">—</td>
+          <td data-v="12.9">£12.9m</td>
+          <td class="muted" data-v="-1">—</td>
+          <td class="muted" data-v="-9999">—</td>
+        
+      </tr>
+    
+      <tr>
+        
+          <td title="Loaned in — not ours to sell"></td>
+        
+        <td class="l">Randal Kolo Muani
+          
+          
+          
+          
+          <span class="badge b-loan" title="Loaned in — no asset capitalized">LOAN-IN</span>
+          
+        </td>
+        <td class="l"><span class="pos">CF</span></td>
+        
+          <td class="muted" data-v="-1">loan</td>
+          <td class="muted" data-v="-1">—</td>
+          <td class="muted" data-v="-1">—</td>
+          <td data-v="17.2">£17.2m</td>
+          <td class="muted" data-v="-1">—</td>
+          <td class="muted" data-v="-9999">—</td>
+        
+      </tr>
+    
+    </tbody>
+  </table>
+</div>
+
+<div id="salebar">
+  <div><span class="ttl">Sell XI simulator</span><br>
+    <span class="cnt" id="sb-count">0</span> selected<span class="warn" id="sb-warn"></span></div>
+  <div class="stats">
+    <span><span class="lab">Cash in (market value)</span><b id="sb-mv">£0.0m</b></span>
+    <span><span class="lab">Book value wiped off</span><b id="sb-nbv">£0.0m</b></span>
+    <span><span class="lab">PSR / FFP book profit</span><b id="sb-bp" class="pl-pos">£0.0m</b></span>
+    <button onclick="clearSel()">Clear</button>
+  </div>
+</div>
+
+<footer>Tick players to model a sale · SOLD £x = agreed price (overrides market value in Book P/L) ·
+  LOAN&rarr; = ours, out on loan · EXT = extension reset modelled · ACAD = academy (NBV £0) ·
+  LOAN-IN = loaned in (not sellable) · ? = low-confidence fee.
+  Edit players.csv and refresh. Source of truth: book_value.py engine.</footer>
+
+<script>
+let lastCol=-1, asc=false;
+function sortBy(col, isText){
+  const tb=document.querySelector('#t tbody');
+  const rows=[...tb.rows];
+  asc = (col===lastCol) ? !asc : false; lastCol=col;
+  rows.sort((a,b)=>{
+    let x,y;
+    if(isText){ x=a.cells[col].innerText.trim().toLowerCase(); y=b.cells[col].innerText.trim().toLowerCase();
+      return asc ? x.localeCompare(y) : y.localeCompare(x); }
+    x=parseFloat(a.cells[col].dataset.v); y=parseFloat(b.cells[col].dataset.v);
+    return asc ? x-y : y-x;
+  });
+  rows.forEach(r=>tb.appendChild(r));
+}
+const $=id=>document.getElementById(id);
+function recalc(cb){
+  if(cb){ cb.closest('tr').classList.toggle('selrow', cb.checked); }
+  let n=0,mv=0,nbv=0,bp=0;
+  document.querySelectorAll('.sel:checked').forEach(c=>{
+    n++; mv+=+c.dataset.mv; nbv+=+c.dataset.nbv; bp+=+c.dataset.bp;
+  });
+  $('sb-count').textContent=n;
+  $('sb-mv').textContent='£'+mv.toFixed(1)+'m';
+  $('sb-nbv').textContent='£'+nbv.toFixed(1)+'m';
+  const b=$('sb-bp');
+  b.textContent=(bp>=0?'+':'')+'£'+bp.toFixed(1)+'m';
+  b.className=bp>=0?'pl-pos':'pl-neg';
+  $('sb-warn').textContent = n>11 ? ' (more than an XI)' : '';
+}
+function clearSel(){
+  document.querySelectorAll('.sel:checked').forEach(c=>{c.checked=false;c.closest('tr').classList.remove('selrow');});
+  recalc();
+}
+
+const STATIC = true;
+const money=v=>(v>=0?'+':'')+'£'+Number(v).toFixed(1)+'m';
+const plClass=v=>v>=0?'pl-pos':'pl-neg';
+
+async function saveSale(inp){
+  const price=inp.value.trim();
+  if(STATIC){ saveLocal(inp, price); return; }   // shared snapshot: recompute in-browser, no server
+  const player=inp.dataset.player;
+  inp.disabled=true;
+  try{
+    const res=await fetch('/api/sale',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({player,price})});
+    const d=await res.json();
+    if(!res.ok){ alert(d.error||'Save failed'); return; }
+    applyRow(inp, d.row); applyTotals(d.totals);
+  }catch(e){ alert('Save failed: '+e); }
+  finally{ inp.disabled=false; }
+}
+
+function saveLocal(inp, price){
+  const nbv=+inp.dataset.nbv, market=+inp.dataset.market;
+  if(price && (isNaN(+price) || +price<0)){ inp.value=''; price=''; }
+  const sold = price!=='';
+  const proceeds = sold ? +price : market;
+  applyRow(inp, {player:inp.dataset.player, sold:sold,
+    sale_price_gbp_m: sold?+(+price).toFixed(1):'', book_profit_gbp_m:+(proceeds-nbv).toFixed(1),
+    market_value_gbp_m:market, nbv_gbp_m:nbv});
+  recomputeTotals();
+}
+
+function recomputeTotals(){
+  let bp=0, realized=0, unrealized=0;
+  document.querySelectorAll('#t tbody tr').forEach(tr=>{
+    if(!tr.querySelector('.sel')) return;            // skip loaned-in (no checkbox)
+    const v=+tr.cells[8].dataset.v;                  // book P/L
+    bp+=v;
+    const inp=tr.querySelector('.saleinp');
+    if(inp && inp.value.trim()!=='') realized+=v; else unrealized+=v;
+  });
+  applyTotals({bp:+bp.toFixed(1), realized:+realized.toFixed(1), unrealized:+unrealized.toFixed(1)});
+}
+
+function applyRow(inp, row){
+  const tr=inp.closest('tr'), sold=row.sold;
+  inp.classList.toggle('has', sold);
+  inp.value = sold ? row.sale_price_gbp_m : '';
+  tr.cells[7].dataset.v = sold ? row.sale_price_gbp_m : -1;          // sale price (sort)
+  const pl=tr.cells[8];                                              // book P/L
+  pl.dataset.v=row.book_profit_gbp_m; pl.textContent=money(row.book_profit_gbp_m);
+  pl.className=plClass(row.book_profit_gbp_m);
+  const pcell=tr.cells[1];                                           // SOLD badge
+  let badge=pcell.querySelector('.b-sold');
+  if(sold){
+    if(!badge){ badge=document.createElement('span'); badge.className='badge b-sold';
+      pcell.insertBefore(badge, pcell.childNodes[1]||null); }
+    badge.textContent='SOLD £'+row.sale_price_gbp_m+'m';
+  } else if(badge){ badge.remove(); }
+  const cb=tr.querySelector('.sel');                                 // simulator data
+  if(cb){ cb.dataset.bp=row.book_profit_gbp_m;
+    cb.dataset.mv = sold ? row.sale_price_gbp_m : row.market_value_gbp_m;
+    if(cb.checked) recalc(); }
+}
+
+function applyTotals(t){
+  const set=(id,v)=>{ const el=$(id); el.textContent='£'+Number(v).toFixed(1)+'m'; el.className='val '+plClass(v); };
+  set('card-bp',t.bp); set('card-real',t.realized); set('card-unreal',t.unrealized);
+  realizedNow=t.realized; updatePSR();
+}
+
+// ---- PSR / FFP headroom (client-side scenario; inputs saved to localStorage) ----
+let realizedNow = 177.6;
+function updatePSR(){
+  const limit=parseFloat($('psr-limit').value)||0;
+  const loss=parseFloat($('psr-loss').value)||0;
+  const headroom = limit - loss + realizedNow;       // room before breaching the limit
+  $('psr-realized').textContent='£'+realizedNow.toFixed(1)+'m';
+  const h=$('psr-headroom');
+  h.textContent=(headroom<0?'-£':'£')+Math.abs(headroom).toFixed(1)+'m';
+  h.className='val '+plClass(headroom);
+  $('psr-status').textContent = headroom>=0 ? 'within limit' : 'OVER limit — breach';
+  const pct = limit>0 ? Math.max(0,Math.min(100, realizedNow/limit*100)) : 0;
+  $('psr-bar').style.width=pct+'%';
+  $('psr-claw').textContent =
+    'Sales claw back £'+realizedNow.toFixed(1)+'m = '+pct.toFixed(0)+'% of the £'+limit.toFixed(0)+'m limit'
+    +' · net headroom = limit − assumed loss + realized sale profit.';
+  localStorage.setItem('psr', JSON.stringify({limit:$('psr-limit').value, loss:$('psr-loss').value}));
+}
+(function initPSR(){
+  try{ const s=JSON.parse(localStorage.getItem('psr')||'{}');
+    if(s.limit!==undefined) $('psr-limit').value=s.limit;
+    if(s.loss!==undefined) $('psr-loss').value=s.loss;
+  }catch(e){}
+  updatePSR();
+})();
+</script>
+</body>
+</html>

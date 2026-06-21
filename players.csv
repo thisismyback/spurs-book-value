@@ -1,0 +1,38 @@
+player,position,status,fee_gbp_m,signed_date,contract_expiry,orig_expiry,extension_date,market_value_eur_m,confidence,note,on_loan_at,sale_price_gbp_m
+Guglielmo Vicario,GK,owned,17.2,2023-07-01,2028-06-30,,,18,high,From Empoli 2023,,16
+Antonin Kinsky,GK,owned,12.5,2025-01-05,2031-06-30,,,15,med,Fee approx; from Slavia Prague Jan 2025,,
+Brandon Austin,GK,academy,0,2021-08-01,2029-06-30,,,0.5,high,Academy product - no acquisition cost,,
+Micky van de Ven,CB,owned,43,2023-08-08,2029-06-30,,,50,high,From Wolfsburg 2023 on 6yr deal (capped at 5); extension only in talks - none signed,,
+Cristian Romero,CB,owned,42,2022-08-30,2029-06-30,2027-06-30,2025-09-01,45,med,From Atalanta 2022; extended Sep 2025 to 2029 (ext date approx),,40
+Kevin Danso,CB,owned,20.9,2025-07-01,2030-06-30,,,20,high,Permanent from Lens 2025 after Jan loan,,
+Radu Dragusin,CB,owned,26.7,2024-01-11,2030-06-30,,,16,high,From Genoa Jan 2024 (incl add-ons),,18
+Ashley Phillips,CB,owned,1.5,2023-08-05,2028-06-30,,,7,low,Fee approx; from Blackburn 2023; on loan at Stoke 25/26,Stoke City,5
+Ben Davies,CB,owned,10,2014-07-23,2028-06-30,,,3,low,From Swansea 2014; 1yr extension to 2028; fully amortized (NBV 0),,
+Luka Vuskovic,CB,owned,12,2025-07-01,2030-06-30,,,60,med,From Hajduk Split (agreed 2023; started 2025); on loan at HSV 25/26,Hamburger SV,55
+Destiny Udogie,LB,owned,15,2022-08-16,2030-06-30,2027-06-30,2024-12-12,30,med,From Udinese 2022 (loaned back); extended Dec 2024 to 2030,,
+Djed Spence,LB,owned,12.5,2022-07-19,2029-06-30,,,30,med,From Middlesbrough 2022; base fee (add-ons up to ~20),,
+Souza,LB,owned,12,2026-01-22,2031-06-30,,,12,low,Fee UNKNOWN - placeholder estimate; from Santos Jan 2026,,
+Pedro Porro,RB,owned,40,2023-07-01,2031-06-30,2028-06-30,2026-03-01,35,med,Permanent from Sporting 2023; extended early 2026 to 2031 (ext date approx),,
+Rodrigo Bentancur,DM,owned,17,2022-01-31,2029-06-30,2026-06-30,2025-10-03,20,high,From Juventus Jan 2022; extended Oct 2025 to 2029,,
+Joao Palhinha,DM,loan,,2025-08-03,2026-06-30,,,15,high,Season loan from Bayern - no asset capitalized,,
+Archie Gray,CM,owned,30,2024-07-02,2030-06-30,,,35,high,From Leeds 2024 (Rodon to Leeds for ~10 separately),,
+Lucas Bergvall,CM,owned,8.5,2024-07-01,2031-06-30,,,35,high,From Djurgarden 2024,,45
+Conor Gallagher,CM,owned,34,2026-01-14,2031-06-30,,,32,med,From Atletico Madrid Jan 2026,,
+Pape Matar Sarr,CM,owned,14.6,2021-08-27,2030-06-30,2026-06-30,2024-01-02,30,med,From Metz 2021 (loaned back); extended Jan 2024 to 2030,,30
+Alfie Devine,AM,academy,0,2025-08-01,2028-06-30,,,8,low,Academy; new deal Aug 2025 (expiry approx); on loan at Preston 25/26,Preston North End,6.5
+Xavi Simons,AM,owned,51,2025-08-29,2030-06-30,,,40,high,From RB Leipzig 2025,,
+James Maddison,AM,owned,40,2023-07-01,2028-06-30,,,20,high,From Leicester 2023,,
+Dejan Kulusevski,AM,owned,25.8,2023-07-01,2028-06-30,,,17,med,Permanent from Juventus 2023 to 2028 - no separate extension,,
+Wilson Odobert,LW,owned,25,2024-08-16,2029-06-30,,,18,high,From Burnley 2024 (incl add-ons),,
+Mohammed Kudus,RW,owned,55,2025-07-10,2031-06-30,,,50,high,From West Ham 2025,,
+Dominic Solanke,CF,owned,65,2024-08-10,2030-06-30,,,28,high,From Bournemouth 2024 (incl add-ons),,
+Richarlison,CF,owned,60,2022-07-01,2027-06-30,,,25,high,From Everton 2022 (incl add-ons),,18
+Mathys Tel,CF,owned,30,2025-07-01,2031-06-30,,,22,high,Permanent from Bayern 2025 after Jan loan,,
+Randal Kolo Muani,CF,loan,,2025-09-01,2026-06-30,,,20,high,Season loan from PSG - no asset capitalized,,
+Dane Scarlett,CF,academy,0,2023-07-01,2027-06-30,,,1.5,high,Academy product; on loan at Hibernian 25/26,Hibernian FC,1.5
+Will Lankshear,CF,academy,0,2024-07-01,2029-06-30,,,7,med,Academy; on loan at Oxford 25/26,Oxford United,
+Kota Takai,CB,owned,5,2025-07-08,2030-06-30,,,5,high,From Kawasaki Frontale 2025 (5yr deal); on loan at Gladbach 25/26,Borussia Monchengladbach,
+Mikey Moore,LW,academy,0,2024-08-12,2030-06-30,,,18,med,Academy; new long-term deal (expiry approx); on loan at Rangers 25/26,Rangers FC,
+Manor Solomon,LW,owned,0,2023-07-11,2028-06-30,,,8,high,Free transfer from Shakhtar 2023 (no fee - NBV 0); on loan at Fiorentina 25/26,ACF Fiorentina,5
+Alejo Veliz,CF,owned,13,2023-08-31,2029-06-30,,,4,med,From Rosario Central 2023 (EUR15m); on loan back at Rosario 25/26,Rosario Central,8
+Yang Min-hyeok,RW,owned,3.4,2025-01-01,2030-06-30,,,3,med,From Gangwon (EUR4m; joined Jan 2025); on loan at Coventry 25/26,Coventry City,
