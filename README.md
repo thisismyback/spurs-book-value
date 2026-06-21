@@ -23,9 +23,15 @@ py -3 app.py      # then open http://localhost:5200
 or just double-click `start_dashboard.bat`. The dashboard reads `players.csv`
 live on every request — edit the CSV and refresh the page to see changes.
 
-## Shareable public site
-Live at **https://thisismyback.github.io/spurs-book-value/** (GitHub Pages, repo
-`thisismyback/spurs-book-value`, served from `docs/`).
+## Shareable public sites
+Two public URLs, both read-only/safe (no visitor can change your data):
+- **Fly.io (server):** https://spurs-book-value.fly.dev/ — runs `app.py` with
+  `PUBLIC_MODE=1` (shared mode + `/api/sale` disabled). Update with `fly deploy`
+  after editing data (the CSV is baked into the image; redeploy to refresh).
+- **GitHub Pages (static):** https://thisismyback.github.io/spurs-book-value/ —
+  served from `docs/`, rebuilt with `build_static.py`.
+
+GitHub Pages, repo `thisismyback/spurs-book-value`, served from `docs/`.
 
 `build_static.py` renders the same dashboard as a single self-contained
 `docs/index.html` in **shared mode**: data baked in, social/Twitter preview tags,
