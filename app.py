@@ -86,6 +86,8 @@ PAGE = """
   .toolbar button:hover{background:#3f4f82}
   .toolbar .share{background:#15803d}
   .toolbar .share:hover{background:#1a9a4a}
+  .toolbar .reset{background:#7c2d2d}
+  .toolbar .reset:hover{background:#9a3a3a}
   .toolbar .hint{font-size:11px;opacity:.55}
   #toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#15803d;color:#fff;
     padding:10px 16px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:100}
@@ -158,6 +160,7 @@ PAGE = """
   <div class="toolbar">
     {% if static %}<button class="share" onclick="shareScenario()">🔗 Share my scenario</button>{% endif %}
     <button onclick="clearSales()">Clear sale prices</button>
+    <button class="reset" onclick="resetAll()">Reset everything</button>
     <span class="hint">{% if static %}Type sale prices &amp; tick a Sell XI, then share a link to your what-if — nothing is saved on the server.{% else %}Reset every agreed sale price back to market value.{% endif %}</span>
   </div>
 
@@ -388,11 +391,23 @@ function shareScenario(){
   if(navigator.clipboard) navigator.clipboard.writeText(url).then(()=>flash('Scenario link copied to clipboard!'),()=>prompt('Copy your link:',url));
   else prompt('Copy your scenario link:',url);
 }
-async function clearSales(){
+async function clearSalesQuiet(){
   const inputs=[...document.querySelectorAll('.saleinp')].filter(i=>i.value.trim()!=='');
   for(const inp of inputs){ inp.value=''; await saveSale(inp); }
+}
+async function clearSales(){
+  await clearSalesQuiet();
   if(STATIC) history.replaceState(null,'',location.origin+location.pathname);
   flash('Sale prices cleared');
+}
+async function resetAll(){
+  if(!STATIC && !confirm('Reset all sale prices (clears them in players.csv), Sell XI selections and the PSR panel to defaults?')) return;
+  await clearSalesQuiet();
+  document.querySelectorAll('.sel:checked').forEach(c=>{ c.checked=false; c.closest('tr').classList.remove('selrow'); });
+  recalc();
+  $('psr-limit').value=105; $('psr-loss').value=0; updatePSR();
+  if(STATIC) history.replaceState(null,'',location.origin+location.pathname);
+  flash('Everything reset to defaults');
 }
 function applyScenario(scn){
   if(scn.sales) document.querySelectorAll('.saleinp').forEach(inp=>{
