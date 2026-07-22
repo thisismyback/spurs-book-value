@@ -26,7 +26,7 @@ Usage:  py -3 book_value.py
 """
 import csv
 import os
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 CSV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "players.csv")
 OUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "book_value_output.csv")
@@ -63,6 +63,9 @@ def compute(row):
         "sold": sale is not None,
         "confidence": row["confidence"],
         "on_loan_at": (row.get("on_loan_at") or "").strip(),
+        # Transfer-window bucket: 'in' = new signing, 'out' = confirmed departure,
+        # '' = existing squad. Drives the Incomings/Outgoings sections in the app.
+        "window_move": (row.get("window_move") or "").strip().lower(),
     }
 
     if status == "loan":
@@ -134,23 +137,57 @@ def load_players():
     return rows
 
 
+def partition(rows):
+    """Split computed rows into the three display buckets used by the dashboard:
+    incomings (window_move 'in'), the current squad (everything else, incl. loans),
+    and outgoings (window_move 'out')."""
+    incomings = [r for r in rows if r.get("window_move") == "in"]
+    outgoings = [r for r in rows if r.get("window_move") == "out"]
+    squad = [r for r in rows if r.get("window_move") not in ("in", "out")]
+    return {"incomings": incomings, "squad": squad, "outgoings": outgoings}
+
+
 def compute_totals(rows):
-    """Sum the owned/academy rows (loans excluded). Splits book profit into
-    realized (players with a sale price entered) vs unrealized (at market value)."""
-    t = {"fee": 0.0, "nbv": 0.0, "mv": 0.0, "bp": 0.0, "realized": 0.0, "unrealized": 0.0}
+    """Sum the owned/academy rows (loans excluded), split by transfer-window bucket.
+
+    Go-forward squad = current squad + incomings (window_move != 'out'): its fee,
+    NBV, market value and (unrealized) book profit feed the summary cards.
+    Confirmed outgoings (window_move == 'out') are off the books -> their book
+    profit is the *realized* gain; their proceeds/NBV feed the window summary.
+    """
+    t = {"fee": 0.0, "nbv": 0.0, "mv": 0.0, "bp": 0.0, "realized": 0.0, "unrealized": 0.0,
+         # window-activity tallies
+         "in_fee": 0.0, "in_nbv": 0.0, "in_count": 0,
+         "out_proceeds": 0.0, "out_nbv": 0.0, "out_count": 0, "loan_out_count": 0}
     for r in rows:
+        move = r.get("window_move", "")
         if r["status"] == "loan":
+            # Loaned-in players hold no asset. Flagging one 'out' = the loan ended
+            # (they returned to their parent club): a departure, but no sale
+            # proceeds, NBV or book profit — so it touches no financial totals.
+            if move == "out":
+                t["loan_out_count"] += 1
             continue
+        if move == "out":
+            proceeds = r["sale_price_gbp_m"] if r.get("sold") else r["market_value_gbp_m"]
+            t["out_proceeds"] += proceeds
+            t["out_nbv"] += r["nbv_gbp_m"]
+            t["out_count"] += 1
+            t["realized"] += r["book_profit_gbp_m"]
+            continue
+        # go-forward squad (existing + incomings)
         t["fee"] += r["fee_gbp_m"]
         t["nbv"] += r["nbv_gbp_m"]
         t["mv"] += r["market_value_gbp_m"]
-        t["bp"] += r["book_profit_gbp_m"]
-        if r.get("sold"):
-            t["realized"] += r["book_profit_gbp_m"]
-        else:
-            t["unrealized"] += r["book_profit_gbp_m"]
+        t["unrealized"] += r["book_profit_gbp_m"]
+        if move == "in":
+            t["in_fee"] += r["fee_gbp_m"]
+            t["in_nbv"] += r["nbv_gbp_m"]
+            t["in_count"] += 1
+    t["bp"] = t["unrealized"] + t["realized"]
     t["amortized"] = t["fee"] - t["nbv"]
-    return {k: round(v, 1) for k, v in t.items()}
+    t["net_spend"] = t["in_fee"] - t["out_proceeds"]
+    return {k: round(v, 1) if isinstance(v, float) else v for k, v in t.items()}
 
 
 def set_sale_price(player, price):
@@ -166,6 +203,188 @@ def set_sale_price(player, price):
     if not matches:
         raise KeyError(player)
     matches[0]["sale_price_gbp_m"] = price
+    with open(CSV_PATH, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def add_player(player, position, fee_gbp_m, contract_years, market_value_eur_m,
+               status="owned", signed_date=None, confidence="med", note="",
+               window_move="in"):
+    """Append a new player to players.csv.
+
+    The caller supplies the CONTRACT LENGTH in years; we derive contract_expiry
+    from it (signed_date + length) so the amortization engine gets a real end date.
+    Contract length itself is never stored as a column — only the resulting expiry.
+    Returns the written row dict. Raises ValueError on bad/duplicate input.
+    """
+    player = (player or "").strip()
+    note = (note or "").strip()
+    position = (position or "").strip()
+    if not player:
+        raise ValueError("Player name is required.")
+    # Unquoted CSV: a comma in a text field would shift every column.
+    if "," in player or "," in note or "," in position:
+        raise ValueError("No commas allowed in name/position/note (use ';').")
+
+    status = (status or "owned").strip().lower()
+    if status not in ("owned", "academy", "loan"):
+        raise ValueError("Status must be owned, academy or loan.")
+    window_move = (window_move or "").strip().lower()
+    if window_move not in ("", "in", "out"):
+        raise ValueError("window_move must be 'in', 'out' or '' (squad).")
+
+    signed = parse_date(signed_date) if signed_date else TODAY
+    try:
+        yrs = float(contract_years)
+    except (TypeError, ValueError):
+        raise ValueError("Contract length (years) must be a number.")
+    if yrs <= 0:
+        raise ValueError("Contract length must be greater than 0 years.")
+    # Day-based so it round-trips with the engine's years_between (days / 365.25).
+    expiry = signed + timedelta(days=round(365.25 * yrs))
+
+    try:
+        mv = float(market_value_eur_m or 0)
+    except (TypeError, ValueError):
+        raise ValueError("Market value (€m) must be a number.")
+    if status == "loan":
+        fee = ""  # loaned-in: no asset capitalized
+    else:
+        try:
+            fee = float(fee_gbp_m or 0)
+        except (TypeError, ValueError):
+            raise ValueError("Fee (£m) must be a number.")
+        if fee < 0:
+            raise ValueError("Fee cannot be negative.")
+
+    with open(CSV_PATH, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        fieldnames = reader.fieldnames
+        rows = list(reader)
+    if any(r.get(None) for r in rows):
+        raise ValueError("players.csv has a mis-columned row (stray comma) — fix before adding.")
+    if any((r["player"] or "").strip().lower() == player.lower() for r in rows):
+        raise ValueError(f"'{player}' is already in the squad.")
+
+    newrow = {k: "" for k in fieldnames}
+    newrow.update(
+        player=player, position=position, status=status,
+        fee_gbp_m=fee, signed_date=signed.isoformat(),
+        contract_expiry=expiry.isoformat(), market_value_eur_m=mv,
+        confidence=(confidence or "med").strip().lower(), note=note,
+        window_move=window_move,
+    )
+    with open(CSV_PATH, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+        writer.writerow(newrow)
+    return newrow
+
+
+def read_raw():
+    """Return the raw CSV rows (unquoted, no compute) for edit pre-fill. Guards commas."""
+    with open(CSV_PATH, newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    for r in rows:
+        if r.get(None):
+            raise ValueError(f"Row for '{r.get('player')}' has a stray comma — fix players.csv.")
+    return rows
+
+
+def update_player(player, position=None, status=None, fee_gbp_m=None,
+                  contract_years=None, market_value_eur_m=None, window_move=None):
+    """Edit an existing player in players.csv. Only the fields passed (not None) are
+    changed. contract_years, when given, re-derives contract_expiry from signed_date
+    (same length->expiry rule as add_player). window_move is left untouched unless
+    passed, so the Deal dropdown remains the bucket control. Raises KeyError if the
+    player isn't found, ValueError on bad input."""
+    player = (player or "").strip()
+    if not player:
+        raise ValueError("Player name is required.")
+    with open(CSV_PATH, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        fieldnames = reader.fieldnames
+        rows = list(reader)
+    if any(r.get(None) for r in rows):
+        raise ValueError("players.csv has a mis-columned row (stray comma) — fix before editing.")
+    matches = [r for r in rows if (r["player"] or "").strip() == player]
+    if not matches:
+        raise KeyError(player)
+    row = matches[0]
+
+    if status is not None:
+        status = (status or "").strip().lower()
+        if status not in ("owned", "academy", "loan"):
+            raise ValueError("Status must be owned, academy or loan.")
+        row["status"] = status
+    cur_status = (row["status"] or "").strip().lower()
+
+    if position is not None:
+        position = (position or "").strip()
+        if "," in position:
+            raise ValueError("No commas allowed in position (use ';').")
+        row["position"] = position
+
+    if fee_gbp_m is not None:
+        if cur_status == "loan":
+            row["fee_gbp_m"] = ""  # loaned-in: no asset capitalized
+        else:
+            try:
+                fee = float(fee_gbp_m or 0)
+            except (TypeError, ValueError):
+                raise ValueError("Fee (£m) must be a number.")
+            if fee < 0:
+                raise ValueError("Fee cannot be negative.")
+            row["fee_gbp_m"] = fee
+
+    if market_value_eur_m is not None:
+        try:
+            row["market_value_eur_m"] = float(market_value_eur_m or 0)
+        except (TypeError, ValueError):
+            raise ValueError("Market value (€m) must be a number.")
+
+    if contract_years is not None and str(contract_years).strip() != "":
+        try:
+            yrs = float(contract_years)
+        except (TypeError, ValueError):
+            raise ValueError("Contract length (years) must be a number.")
+        if yrs <= 0:
+            raise ValueError("Contract length must be greater than 0 years.")
+        signed = parse_date(row["signed_date"]) if row["signed_date"] else TODAY
+        row["contract_expiry"] = (signed + timedelta(days=round(365.25 * yrs))).isoformat()
+
+    if window_move is not None:
+        window_move = (window_move or "").strip().lower()
+        if window_move not in ("", "in", "out"):
+            raise ValueError("window_move must be 'in', 'out' or '' (squad).")
+        row["window_move"] = window_move
+
+    with open(CSV_PATH, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+    return row
+
+
+def set_window_move(player, move):
+    """Set the transfer-window bucket ('in', 'out', or '' for squad) for one player.
+    Preserves all other columns and the unquoted format."""
+    move = (move or "").strip().lower()
+    if move not in ("", "in", "out"):
+        raise ValueError("window_move must be 'in', 'out', or '' (squad).")
+    with open(CSV_PATH, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        fieldnames = reader.fieldnames
+        rows = list(reader)
+    if any(r.get(None) for r in rows):
+        raise ValueError("players.csv has a mis-columned row (stray comma) — fix before editing.")
+    matches = [r for r in rows if r["player"] == player]
+    if not matches:
+        raise KeyError(player)
+    matches[0]["window_move"] = move
     with open(CSV_PATH, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
@@ -205,8 +424,9 @@ def main():
 
     # --- write output csv ---
     fields = ["player", "position", "status", "confidence", "extended", "on_loan_at",
-              "fee_gbp_m", "amort_period_yrs", "years_elapsed", "pct_amortized",
-              "nbv_gbp_m", "market_value_gbp_m", "sale_price_gbp_m", "book_profit_gbp_m"]
+              "window_move", "fee_gbp_m", "amort_period_yrs", "years_elapsed",
+              "pct_amortized", "nbv_gbp_m", "market_value_gbp_m", "sale_price_gbp_m",
+              "book_profit_gbp_m"]
     with open(OUT_PATH, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader()

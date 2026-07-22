@@ -22,9 +22,12 @@ OUT_FILE = os.path.join(OUT_DIR, "index.html")
 
 def main():
     rows = bv.load_players()
+    parts = bv.partition(rows)
     totals = bv.compute_totals(rows)
     html = Template(PAGE).render(
-        rows=rows, t=totals, today=bv.TODAY, rate=bv.EUR_GBP, static=True
+        squad=parts["squad"], incomings=parts["incomings"],
+        outgoings=parts["outgoings"], t=totals, today=bv.TODAY,
+        rate=bv.EUR_GBP, static=True, editmap={}, editnames=[],
     )
     os.makedirs(OUT_DIR, exist_ok=True)
     with open(OUT_FILE, "w", encoding="utf-8") as f:

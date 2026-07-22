@@ -89,6 +89,35 @@ PAGE = """
   .toolbar .reset{background:#7c2d2d}
   .toolbar .reset:hover{background:#9a3a3a}
   .toolbar .hint{font-size:11px;opacity:.55}
+  .window{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+  .window .wk{flex:1;min-width:200px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:13px 16px}
+  .window .wk.in{border-left:3px solid #16a34a}
+  .window .wk.out{border-left:3px solid #0d9488}
+  .window .wk.net{border-left:3px solid #64748b}
+  .window .wk .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.6px;opacity:.7}
+  .window .wk .v{font-size:22px;font-weight:700;margin-top:5px}
+  .window .wk .s{font-size:11px;opacity:.55;margin-top:4px}
+  h2.sec{font-size:15px;margin:28px 0 10px;display:flex;align-items:baseline;gap:10px}
+  h2.sec .secn{font-size:12px;font-weight:400;opacity:.6}
+  table.mini{margin-bottom:6px}
+  .b-in{background:#16a34a}
+  select.mv{background:#0f1424;border:1px solid var(--line);color:#e8ecf5;border-radius:5px;padding:4px 6px;font-size:11px}
+  select.mv:focus{outline:none;border-color:#15803d}
+  .toolbar .add{background:#1d4ed8}
+  .toolbar .add:hover{background:#2563eb}
+  .addform{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+  .addform .af-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+  .addform .af{display:flex;flex-direction:column;gap:4px}
+  .addform .af label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;opacity:.6}
+  .addform .af input,.addform .af select{background:#0f1424;border:1px solid var(--line);color:#e8ecf5;border-radius:6px;padding:7px 9px;font-size:13px}
+  .addform .af input[type=number]{width:106px}
+  .addform .af input[type=text]{width:170px}
+  .addform .af.chk{justify-content:flex-end}
+  .addform .af.chk label{display:flex;align-items:center;gap:6px;text-transform:none;font-size:12px;opacity:.85}
+  .addform .go{background:#15803d;color:#fff;border:0;border-radius:6px;padding:9px 16px;cursor:pointer;font-size:13px}
+  .addform .go:hover{background:#1a9a4a}
+  .addform .lenhi label{color:#60a5fa}
+  .addform .af-note{font-size:11px;opacity:.55;margin-top:10px}
   #toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#15803d;color:#fff;
     padding:10px 16px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:100}
   #toast.show{opacity:1}
@@ -132,12 +161,24 @@ PAGE = """
     <div class="card"><div class="lbl">Total book profit</div>
       <div class="val {{ 'pl-pos' if t.bp>=0 else 'pl-neg' }}" id="card-bp">£{{ t.bp }}m</div>
       <div class="note">realized + unrealized</div></div>
-    <div class="card accent"><div class="lbl">Realized (agreed sales)</div>
+    <div class="card accent"><div class="lbl">Realized (confirmed sales)</div>
       <div class="val {{ 'pl-pos' if t.realized>=0 else 'pl-neg' }}" id="card-real">£{{ t.realized }}m</div>
-      <div class="note">locked in via SOLD prices</div></div>
+      <div class="note">booked from Outgoings ({{ t.out_count }})</div></div>
     <div class="card"><div class="lbl">Unrealized (at market)</div>
       <div class="val {{ 'pl-pos' if t.unrealized>=0 else 'pl-neg' }}" id="card-unreal">£{{ t.unrealized }}m</div>
-      <div class="note">still hypothetical, Transfermarkt</div></div>
+      <div class="note">go-forward squad, still hypothetical</div></div>
+  </div>
+
+  <div class="window">
+    <div class="wk in"><div class="lbl">⬆ Incomings</div>
+      <div class="v">{{ t.in_count }} in · £{{ t.in_fee }}m</div>
+      <div class="s">gross transfer spend this window</div></div>
+    <div class="wk out"><div class="lbl">⬇ Outgoings</div>
+      <div class="v">{{ t.out_count }} out · £{{ t.out_proceeds }}m</div>
+      <div class="s">sale proceeds · £{{ t.realized }}m book profit realized</div></div>
+    <div class="wk net"><div class="lbl">Net spend</div>
+      <div class="v {{ 'pl-neg' if t.net_spend>0 else 'pl-pos' if t.net_spend<0 else '' }}">{{ '−£' if t.net_spend>0 else '+£' if t.net_spend<0 else '£' }}{{ t.net_spend|abs }}m</div>
+      <div class="s">incomings fees − outgoings proceeds</div></div>
   </div>
 
   <div class="psr">
@@ -159,10 +200,44 @@ PAGE = """
 
   <div class="toolbar">
     {% if static %}<button class="share" onclick="shareScenario()">🔗 Share my scenario</button>{% endif %}
+    {% if not static %}<button class="add" onclick="toggleAdd()">➕ Add player</button>{% endif %}
     <button onclick="clearSales()">Clear sale prices</button>
     <button class="reset" onclick="resetAll()">Reset everything</button>
-    <span class="hint">{% if static %}Type sale prices &amp; tick a Sell XI, then share a link to your what-if — nothing is saved on the server.{% else %}Reset every agreed sale price back to market value.{% endif %}</span>
+    <span class="hint">{% if static %}Type sale prices &amp; tick a Sell XI, then share a link to your what-if — nothing is saved on the server.{% else %}Add a signing, reset agreed sale prices back to market value.{% endif %}</span>
   </div>
+
+  {% if not static %}
+  <div id="addform" class="addform" style="display:none" data-mode="add">
+    <div class="af-row">
+      <div class="af"><label>Player</label>
+        <select id="af-picker" onchange="loadPlayer()">
+          <option value="">➕ New player…</option>
+          {% for n in editnames %}<option value="{{ n }}">{{ n }}</option>{% endfor %}
+        </select></div>
+      <div class="af"><label>Player name</label><input id="af-name" type="text" placeholder="e.g. New Signing"></div>
+      <div class="af"><label>Position</label>
+        <select id="af-pos">
+          <option>GK</option><option>CB</option><option>LB</option><option>RB</option>
+          <option>DM</option><option selected>CM</option><option>AM</option>
+          <option>LW</option><option>RW</option><option>CF</option></select></div>
+      <div class="af"><label>Status</label>
+        <select id="af-status">
+          <option value="owned" selected>Owned (fee)</option>
+          <option value="academy">Academy / free</option>
+          <option value="loan">Loan (in)</option></select></div>
+      <div class="af"><label>Fee (£m)</label><input id="af-fee" type="number" step="0.5" min="0" value="0"></div>
+      <div class="af lenhi"><label title="Internal only — sets the amortization rate; never shown as a column">Contract length (yrs) 🔒</label>
+        <input id="af-years" type="number" step="0.5" min="0.5" value="5"></div>
+      <div class="af"><label>Market value (€m)</label><input id="af-market" type="number" step="0.5" min="0" value="0"></div>
+      <div class="af chk" id="af-incoming-wrap"><label><input id="af-incoming" type="checkbox" checked> Show in Incomings</label></div>
+      <div class="af"><button class="go" id="af-submit" onclick="addPlayer()">Add to squad</button></div>
+    </div>
+    <div class="af-note">🔒 Contract length drives the amortization rate (fee ÷ length, capped at 5 yrs) and is
+      <b>not</b> displayed — the table shows % amortized &amp; Net Book Value instead. Signed date defaults to today
+      on new players (edits keep the original). Pick an existing player above to <b>edit</b> them; use the row's
+      <b>Deal</b> dropdown to move them In/Out.</div>
+  </div>
+  {% endif %}
 
   <table id="t">
     <thead><tr>
@@ -175,9 +250,10 @@ PAGE = """
       <th onclick="sortBy(6,false)">Market Value</th>
       <th onclick="sortBy(7,false)" title="Agreed/actual sale price — overrides market value in Book P/L">Sale Price</th>
       <th onclick="sortBy(8,false)">Book P/L</th>
+      {% if not static %}<th title="Move this player to Incomings or Outgoings">Deal</th>{% endif %}
     </tr></thead>
     <tbody>
-    {% for r in rows %}
+    {% for r in squad %}
       <tr>
         {% if r.status=='loan' %}
           <td title="Loaned in — not ours to sell"></td>
@@ -219,10 +295,82 @@ PAGE = """
           <td data-v="{{ r.book_profit_gbp_m }}" class="{{ 'pl-pos' if r.book_profit_gbp_m>=0 else 'pl-neg' }}">
             {{ '+' if r.book_profit_gbp_m>=0 else '' }}£{{ r.book_profit_gbp_m }}m</td>
         {% endif %}
+        {% if not static %}<td><select class="mv" data-player="{{ r.player }}" onchange="moveP(this)" title="Move to Incomings / Outgoings">
+          <option value="">— squad —</option>
+          <option value="in">⬆ Incoming</option>
+          <option value="out">{{ '⬇ Loan ended' if r.status=='loan' else '⬇ Out / sold' }}</option></select></td>{% endif %}
       </tr>
     {% endfor %}
     </tbody>
   </table>
+
+  {% if incomings %}
+  <h2 class="sec">⬆ Incomings <span class="secn">{{ t.in_count }} player{{ 's' if t.in_count!=1 else '' }} · £{{ t.in_fee }}m gross spend</span></h2>
+  <table class="mini">
+    <thead><tr><th class="l">Player</th><th class="l">Pos</th><th>Fee</th>
+      <th title="Annual P&amp;L amortization charge (fee ÷ contract length, capped 5y)">Amort / yr</th>
+      <th>Net Book Value</th><th>Market Value</th>{% if not static %}<th>Deal</th>{% endif %}</tr></thead>
+    <tbody>
+    {% for r in incomings %}
+      <tr>
+        <td class="l">{{ r.player }}<span class="badge b-in" title="New signing this window">IN</span>
+          {% if r.status=='loan' %}<span class="badge b-loan" title="Loaned in — no asset capitalized">LOAN-IN</span>{% endif %}
+          {% if r.extended %}<span class="badge b-ext">EXT</span>{% endif %}
+          {% if r.status=='academy' %}<span class="badge b-acad">ACAD</span>{% endif %}
+          {% if r.on_loan_at %}<span class="badge b-out" title="Out on loan at {{ r.on_loan_at }}">LOAN&rarr; {{ r.on_loan_at }}</span>{% endif %}
+          {% if r.confidence=='low' %}<span class="badge b-low" title="Low-confidence fee">?</span>{% endif %}</td>
+        <td class="l"><span class="pos">{{ r.position }}</span></td>
+        {% if r.status=='loan' %}
+        <td class="muted">loan</td><td class="muted">—</td><td class="muted">—</td>
+        <td>£{{ r.market_value_gbp_m }}m</td>
+        {% else %}
+        <td>£{{ r.fee_gbp_m }}m</td>
+        <td>£{{ (r.fee_gbp_m / r.amort_period_yrs)|round(1) if r.amort_period_yrs else 0 }}m</td>
+        <td>£{{ r.nbv_gbp_m }}m</td>
+        <td>£{{ r.market_value_gbp_m }}m</td>
+        {% endif %}
+        {% if not static %}<td><select class="mv" data-player="{{ r.player }}" onchange="moveP(this)">
+          <option value="">— squad —</option>
+          <option value="in" selected>⬆ Incoming</option>
+          <option value="out">{{ '⬇ Loan ended' if r.status=='loan' else '⬇ Out / sold' }}</option></select></td>{% endif %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if outgoings %}
+  <h2 class="sec">⬇ Outgoings <span class="secn">{{ t.out_count }} sold · £{{ t.out_proceeds }}m proceeds · £{{ t.realized }}m book profit realized{% if t.loan_out_count %} · {{ t.loan_out_count }} loan return{{ 's' if t.loan_out_count!=1 else '' }}{% endif %}</span></h2>
+  <table class="mini">
+    <thead><tr><th class="l">Player</th><th class="l">Pos</th><th>Original Fee</th>
+      <th title="Un-amortized value wiped off the balance sheet at sale">NBV at sale</th>
+      <th>Sale Price</th><th>Book P/L (realized)</th>{% if not static %}<th>Deal</th>{% endif %}</tr></thead>
+    <tbody>
+    {% for r in outgoings %}
+      <tr>
+        {% if r.status=='loan' %}
+        <td class="l">{{ r.player }}<span class="badge b-loan" title="Loan ended — returned to parent club">LOAN ENDED</span></td>
+        <td class="l"><span class="pos">{{ r.position }}</span></td>
+        <td class="muted">—</td><td class="muted">—</td>
+        <td class="muted">back to parent club</td><td class="muted">—</td>
+        {% else %}
+        <td class="l">{{ r.player }}<span class="badge b-sold" title="Confirmed departure">SOLD{% if r.sold %} £{{ r.sale_price_gbp_m }}m{% endif %}</span>
+          {% if r.status=='academy' %}<span class="badge b-acad" title="Academy — pure profit (NBV £0)">ACAD</span>{% endif %}</td>
+        <td class="l"><span class="pos">{{ r.position }}</span></td>
+        <td>£{{ r.fee_gbp_m }}m</td>
+        <td>£{{ r.nbv_gbp_m }}m</td>
+        <td>{% if r.sold %}£{{ r.sale_price_gbp_m }}m{% else %}<span class="muted">≈ market £{{ r.market_value_gbp_m }}m</span>{% endif %}</td>
+        <td class="{{ 'pl-pos' if r.book_profit_gbp_m>=0 else 'pl-neg' }}">{{ '+' if r.book_profit_gbp_m>=0 else '' }}£{{ r.book_profit_gbp_m }}m</td>
+        {% endif %}
+        {% if not static %}<td><select class="mv" data-player="{{ r.player }}" onchange="moveP(this)">
+          <option value="">— squad —</option>
+          <option value="in">⬆ Incoming</option>
+          <option value="out" selected>{{ '⬇ Loan ended' if r.status=='loan' else '⬇ Out / sold' }}</option></select></td>{% endif %}
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
 </div>
 
 <div id="salebar">
@@ -309,15 +457,14 @@ function saveLocal(inp, price){
 }
 
 function recomputeTotals(){
-  let bp=0, realized=0, unrealized=0;
+  // Squad table holds only go-forward players -> its book P/L is all UNrealized.
+  // Realized profit comes solely from confirmed Outgoings (fixed until a reload).
+  let unreal=0;
   document.querySelectorAll('#t tbody tr').forEach(tr=>{
     if(!tr.querySelector('.sel')) return;            // skip loaned-in (no checkbox)
-    const v=+tr.cells[8].dataset.v;                  // book P/L
-    bp+=v;
-    const inp=tr.querySelector('.saleinp');
-    if(inp && inp.value.trim()!=='') realized+=v; else unrealized+=v;
+    unreal += +tr.cells[8].dataset.v;                // book P/L
   });
-  applyTotals({bp:+bp.toFixed(1), realized:+realized.toFixed(1), unrealized:+unrealized.toFixed(1)});
+  applyTotals({bp:+(unreal+realizedNow).toFixed(1), realized:realizedNow, unrealized:+unreal.toFixed(1)});
 }
 
 function applyRow(inp, row){
@@ -409,6 +556,62 @@ async function resetAll(){
   if(STATIC) history.replaceState(null,'',location.origin+location.pathname);
   flash('Everything reset to defaults');
 }
+const EDITMAP = {{ editmap|tojson }};
+function toggleAdd(){
+  const f=$('addform'); const open=f.style.display==='none';
+  f.style.display=open?'block':'none';
+  if(open && !$('af-picker').value) $('af-name').focus();
+}
+function afMode(edit){
+  $('addform').dataset.mode = edit?'edit':'add';
+  $('af-submit').textContent = edit?'Save changes':'Add to squad';
+  $('af-name').readOnly = edit;
+  $('af-incoming-wrap').style.display = edit?'none':'';
+}
+function loadPlayer(){
+  const name=$('af-picker').value;
+  if(!name){                                       // back to "new player" (add) mode
+    $('af-name').value=''; $('af-pos').value='CM'; $('af-status').value='owned';
+    $('af-fee').value=0; $('af-years').value=5; $('af-market').value=0; $('af-incoming').checked=true;
+    afMode(false); $('af-name').focus(); return;
+  }
+  const p=EDITMAP[name]; if(!p) return;            // pre-fill from the picked player
+  $('af-name').value=name;
+  if(p.position) $('af-pos').value=p.position;
+  $('af-status').value=p.status||'owned';
+  $('af-fee').value=(p.fee===''?0:p.fee);
+  $('af-years').value=p.years;
+  $('af-market').value=(p.market_eur===''?0:p.market_eur);
+  afMode(true);
+}
+async function addPlayer(){
+  const edit=$('addform').dataset.mode==='edit';
+  const name = edit ? $('af-picker').value : $('af-name').value.trim();
+  if(!name){ alert('Enter a player name'); $('af-name').focus(); return; }
+  const body={player:name, position:$('af-pos').value, status:$('af-status').value,
+    fee:$('af-fee').value, years:$('af-years').value, market:$('af-market').value};
+  if(!edit) body.incoming=$('af-incoming').checked;
+  try{
+    const res=await fetch(edit?'/api/update':'/api/add',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await res.json();
+    if(!res.ok){ alert(d.error||'Save failed'); return; }
+    location.reload();                             // re-render with the change
+  }catch(e){ alert('Save failed: '+e); }
+}
+async function moveP(sel){
+  // Local admin only: move a player between squad / incomings / outgoings,
+  // persist to players.csv, then reload so the sections re-partition.
+  const player=sel.dataset.player, move=sel.value;
+  sel.disabled=true;
+  try{
+    const res=await fetch('/api/move',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({player,move})});
+    const d=await res.json();
+    if(!res.ok){ alert(d.error||'Move failed'); sel.disabled=false; return; }
+    location.reload();
+  }catch(e){ alert('Move failed: '+e); sel.disabled=false; }
+}
 function applyScenario(scn){
   if(scn.sales) document.querySelectorAll('.saleinp').forEach(inp=>{
     const p=inp.dataset.player;
@@ -433,9 +636,14 @@ function applyScenario(scn){
 @app.route("/")
 def index():
     rows = bv.load_players()
+    parts = bv.partition(rows)
     totals = bv.compute_totals(rows)
+    editmap = {} if PUBLIC else _edit_map()
     return render_template_string(
-        PAGE, rows=rows, t=totals, today=bv.TODAY, rate=bv.EUR_GBP, static=PUBLIC
+        PAGE, squad=parts["squad"], incomings=parts["incomings"],
+        outgoings=parts["outgoings"], t=totals, today=bv.TODAY,
+        rate=bv.EUR_GBP, static=PUBLIC, editmap=editmap,
+        editnames=sorted(editmap),
     )
 
 
@@ -463,6 +671,75 @@ def api_sale():
     totals = bv.compute_totals(rows)
     row = next((r for r in rows if r["player"] == player), None)
     return jsonify(row=row, totals=totals)
+
+
+@app.route("/api/move", methods=["POST"])
+def api_move():
+    if PUBLIC:  # read-only public deployment — no server-side writes
+        return jsonify(error="Editing is disabled on the public site"), 403
+    data = request.get_json(force=True)
+    player = (data.get("player") or "").strip()
+    move = (str(data.get("move") or "")).strip().lower()
+    try:
+        bv.set_window_move(player, move)
+    except KeyError:
+        return jsonify(error=f"Unknown player '{player}'"), 404
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(ok=True)
+
+
+@app.route("/api/add", methods=["POST"])
+def api_add():
+    if PUBLIC:  # read-only public deployment — no server-side writes
+        return jsonify(error="Editing is disabled on the public site"), 403
+    d = request.get_json(force=True)
+    try:
+        row = bv.add_player(
+            player=d.get("player"), position=d.get("position"),
+            fee_gbp_m=d.get("fee"), contract_years=d.get("years"),
+            market_value_eur_m=d.get("market"), status=(d.get("status") or "owned"),
+            signed_date=(d.get("signed") or None),
+            window_move=("in" if d.get("incoming") else ""),
+        )
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(ok=True, player=row["player"])
+
+
+@app.route("/api/update", methods=["POST"])
+def api_update():
+    if PUBLIC:  # read-only public deployment — no server-side writes
+        return jsonify(error="Editing is disabled on the public site"), 403
+    d = request.get_json(force=True)
+    try:
+        row = bv.update_player(
+            player=d.get("player"), position=d.get("position"),
+            status=d.get("status"), fee_gbp_m=d.get("fee"),
+            contract_years=d.get("years"), market_value_eur_m=d.get("market"),
+        )
+    except KeyError:
+        return jsonify(error=f"Unknown player '{d.get('player')}'"), 404
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(ok=True, player=row["player"])
+
+
+def _edit_map():
+    """Raw values + derived contract length (yrs) per player, for the edit form."""
+    m = {}
+    for r in bv.read_raw():
+        signed, expiry = r["signed_date"], r["contract_expiry"]
+        try:
+            yrs = round(bv.years_between(bv.parse_date(signed), bv.parse_date(expiry)), 1)
+        except Exception:
+            yrs = ""
+        m[r["player"]] = {
+            "position": r["position"], "status": (r["status"] or "").strip().lower(),
+            "fee": r["fee_gbp_m"], "market_eur": r["market_value_eur_m"],
+            "years": yrs, "window_move": (r.get("window_move") or "").strip().lower(),
+        }
+    return m
 
 
 if __name__ == "__main__":
