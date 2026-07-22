@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 book_value_output.csv
+
+# Financial report source PDFs (Swiss Ramble summaries) - keep local only
+reports/

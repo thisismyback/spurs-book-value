@@ -25,11 +25,13 @@ Notes / limitations:
 Usage:  py -3 book_value.py
 """
 import csv
+import json
 import os
 from datetime import date, datetime, timedelta
 
 CSV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "players.csv")
 OUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "book_value_output.csv")
+PSR_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "psr.json")
 
 EUR_GBP = 0.86          # EUR -> GBP conversion for Transfermarkt market values
 AMORT_CAP_YEARS = 5.0   # PL/UEFA cap on amortization period
@@ -188,6 +190,123 @@ def compute_totals(rows):
     t["amortized"] = t["fee"] - t["nbv"]
     t["net_spend"] = t["in_fee"] - t["out_proceeds"]
     return {k: round(v, 1) if isinstance(v, float) else v for k, v in t.items()}
+
+
+def load_psr():
+    """Load the financial-reporting inputs (psr.json) used by the PSR/UEFA model."""
+    with open(PSR_PATH, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def incomings_amortisation(rows):
+    """Total annual P&L amortisation charge of the confirmed incomings (fee / capped
+    term). This is the *only* way an incoming transfer fee hits PSR each year — the
+    fee itself is capitalised, not expensed. Loans contribute nothing."""
+    total = 0.0
+    for r in rows:
+        if r.get("window_move") != "in" or r["status"] == "loan":
+            continue
+        period = r.get("amort_period_yrs") or 0
+        if period:
+            total += r["fee_gbp_m"] / period
+    return round(total, 1)
+
+
+def compute_psr(rows, cfg=None):
+    """Build the PSR / UEFA compliance picture from psr.json + live transfer activity.
+
+    Premier League PSR: a club may lose at most £105m over a rolling 3 seasons, but
+    on an ADJUSTED basis — reported losses are softened by big allowable deductions
+    (stadium/infrastructure depreciation, COVID, women's, academy, community). We sum
+    the window's reported pre-tax P&L and deductions to get the adjusted result, then
+    overlay what this tool knows about the current window: confirmed player-sale book
+    profit (helps) and new-signing amortisation (a recurring annual charge that hurts).
+
+    UEFA adds two tests: the Football Earnings Rule (its PSR equivalent, a €60m/€90m
+    loss limit, here reduced to Spurs' equity-extended €47m) and Squad Cost Control
+    (player wages + amortisation + agent fees capped at 70% of revenue + sale profit).
+    """
+    cfg = cfg or load_psr()
+    by_season = {s["season"]: s for s in cfg["seasons"]}
+    window = [by_season[s] for s in cfg["window_seasons"] if s in by_season]
+
+    reported = sum(s["pretax_pnl_gbp_m"] for s in window)          # negative = loss
+    deductions = sum(s["allowable_deductions_gbp_m"] for s in window)
+    adjusted = reported + deductions                               # +ve = PSR profit
+    limit = cfg["psr_limit_gbp_m"]
+    headroom = limit + adjusted                                    # room before breach
+
+    # --- live transfer overlay (this window's dealing, per the squad tool) ---
+    realized = round(sum(
+        (r["sale_price_gbp_m"] if r.get("sold") else r["market_value_gbp_m"]) - r["nbv_gbp_m"]
+        for r in rows if r.get("window_move") == "out" and r["status"] != "loan"), 1)
+    new_amort = incomings_amortisation(rows)
+    net_first_yr = round(realized - new_amort, 1)
+    proj_adjusted = round(adjusted + net_first_yr, 1)
+    proj_headroom = round(limit + proj_adjusted, 1)
+
+    # --- UEFA Football Earnings Rule (work in EUR) ---
+    u = cfg["uefa"]
+    eur = u["eur_gbp"]
+    adj_eur = round(adjusted / eur, 1)
+    allow_eur = u["equity_extended_allowable_loss_eur_m"]
+    uefa_margin = round(adj_eur + allow_eur, 1)                    # +ve = below threshold
+
+    # --- UEFA Squad Cost Control (anchor = newest window season) ---
+    anchor = window[-1]
+    player_wages = anchor["wages_gbp_m"] * u["player_wage_share_of_total_pct"] / 100.0
+    squad_cost = player_wages + anchor["amortisation_gbp_m"] + u["agent_fees_gbp_m"]
+    scr_base = anchor["revenue_gbp_m"] + anchor["player_sale_profit_gbp_m"]
+    scr = round(squad_cost / scr_base * 100, 1) if scr_base else 0.0
+    # projected ratio if this window's incomings amortisation + sale profit are layered on
+    proj_squad_cost = squad_cost + new_amort
+    proj_scr_base = scr_base + realized
+    proj_scr = round(proj_squad_cost / proj_scr_base * 100, 1) if proj_scr_base else 0.0
+
+    def clamp(v):
+        return round(max(0.0, min(100.0, v)), 1)
+
+    return {
+        "limit": limit,
+        "window": [s["season"] for s in window],
+        "seasons": window,
+        "reported_loss": round(-reported, 1),                     # positive magnitude
+        "deductions": round(deductions, 1),
+        "adjusted": round(adjusted, 1),
+        "headroom": round(headroom, 1),
+        "within": adjusted >= -limit,
+        "used_pct": clamp(-adjusted / limit * 100) if limit else 0.0,
+        # live overlay
+        "realized": realized,
+        "new_amort": new_amort,
+        "net_first_yr": net_first_yr,
+        "proj_adjusted": proj_adjusted,
+        "proj_headroom": proj_headroom,
+        "proj_used_pct": clamp(-proj_adjusted / limit * 100) if limit else 0.0,
+        # UEFA football earnings
+        "uefa_adj_eur": adj_eur,
+        "uefa_allow_eur": allow_eur,
+        "uefa_base_eur": u["football_earnings_base_limit_eur_m"],
+        "uefa_ext_eur": u["football_earnings_equity_extended_limit_eur_m"],
+        "uefa_equity_eur": u["equity_contribution_eur_m"],
+        "uefa_margin": uefa_margin,
+        "uefa_within": adj_eur >= -allow_eur,
+        "uefa_used_pct": clamp(-adj_eur / allow_eur * 100) if allow_eur else 0.0,
+        # UEFA squad cost control
+        "scr": scr,
+        "scr_cap": u["squad_cost_ratio_cap_pct"],
+        "scr_pct": clamp(scr / u["squad_cost_ratio_cap_pct"] * 100) if u["squad_cost_ratio_cap_pct"] else 0.0,
+        "proj_scr_pct": clamp(proj_scr / u["squad_cost_ratio_cap_pct"] * 100) if u["squad_cost_ratio_cap_pct"] else 0.0,
+        "scr_anchor": anchor["season"],
+        "scr_player_wages": round(player_wages, 1),
+        "scr_amort": round(anchor["amortisation_gbp_m"], 1),
+        "scr_agent": round(u["agent_fees_gbp_m"], 1),
+        "scr_revenue": round(anchor["revenue_gbp_m"], 1),
+        "scr_sale_profit": round(anchor["player_sale_profit_gbp_m"], 1),
+        "proj_scr": proj_scr,
+        "scr_within": scr <= u["squad_cost_ratio_cap_pct"],
+        "reference": cfg.get("reference", {}),
+    }
 
 
 def set_sale_price(player, price):

@@ -16,6 +16,12 @@ app = Flask(__name__)
 # so no visitor can alter the data. Locally it's unset → full editing.
 PUBLIC = os.environ.get("PUBLIC_MODE") == "1"
 
+# Canonical public URL of the deployed site. When you generate a "share my
+# scenario" link from the LOCAL dashboard, it points here (a localhost link is
+# useless to share) with the scenario encoded in the ?s= param. On the public
+# site itself the link just uses the current location.
+PUBLIC_URL = os.environ.get("PUBLIC_URL", "https://thisismyback.github.io/spurs-book-value/")
+
 PAGE = """
 <!doctype html>
 <html lang="en">
@@ -67,20 +73,31 @@ PAGE = """
   .saleinp:focus{outline:none;border-color:#15803d;background:#10241a}
   .saleinp.has{border-color:#15803d;color:#4ade80}
   .card.accent{border-color:#15803d}
-  .psr{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:15px 18px;margin-bottom:22px;
-    display:flex;align-items:center;gap:24px;flex-wrap:wrap}
-  .psr .hd .t{font-size:11px;text-transform:uppercase;letter-spacing:.6px;opacity:.65}
-  .psr .hd .s{font-size:11px;opacity:.5;margin-top:3px}
-  .psr .grp{display:flex;flex-direction:column;gap:4px}
-  .psr .grp label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;opacity:.6}
-  .psr input{width:92px;background:#0f1424;border:1px solid var(--line);color:#e8ecf5;border-radius:6px;padding:7px 9px;font-size:14px;text-align:right}
-  .psr input:focus{outline:none;border-color:#15803d}
-  .psr .res{margin-left:auto;text-align:right}
-  .psr .res .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.4px;opacity:.6}
-  .psr .res .st{font-size:11px;opacity:.75;margin-top:2px}
-  .psr .barwrap{flex-basis:100%;height:8px;background:#2a355c;border-radius:4px;overflow:hidden;margin-top:6px}
-  .psr .barwrap>i{display:block;height:100%;background:var(--green);transition:width .2s}
-  .psr .claw{flex-basis:100%;font-size:11px;opacity:.6}
+  .psr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-bottom:14px}
+  .pcard{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:15px 17px;border-top:3px solid #64748b}
+  .pcard.ok{border-top-color:var(--green)}
+  .pcard.bad{border-top-color:var(--red)}
+  .pcard .pc-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .pcard .pc-t{font-size:12px;font-weight:700;letter-spacing:.3px}
+  .pcard .pc-chip{font-size:9px;font-weight:700;letter-spacing:.5px;padding:3px 7px;border-radius:5px}
+  .chip-ok{background:#14532d;color:#4ade80}
+  .chip-bad{background:#7f1d1d;color:#fca5a5}
+  .pcard .pc-big{font-size:30px;font-weight:800;line-height:1.1}
+  .pcard .pc-sub{font-size:11px;opacity:.6;margin-top:2px}
+  .pcard .pc-rows{margin-top:12px;font-size:12px;display:flex;flex-direction:column;gap:5px}
+  .pcard .pc-rows>div{display:flex;justify-content:space-between;align-items:baseline}
+  .pcard .pc-rows>div span{opacity:.7}
+  .pcard .pc-rows>div.rule{border-top:1px solid var(--line);padding-top:6px;margin-top:1px;font-weight:600}
+  .pcard .pc-rows>div.rule span{opacity:.9}
+  .pcard .pc-bar{height:7px;background:#2a355c;border-radius:4px;overflow:hidden;margin-top:12px;position:relative}
+  .pcard .pc-bar>i{display:block;height:100%;background:var(--green);transition:width .3s}
+  .pcard .pc-bar.warn>i{background:#f59e0b}
+  .pcard .pc-bar.over>i{background:var(--red)}
+  .pcard .pc-cap{font-size:10px;opacity:.5;margin-top:5px;display:flex;justify-content:space-between}
+  .pcard .pc-foot{font-size:11px;opacity:.62;margin-top:11px;line-height:1.5}
+  .pcard .pc-foot b{opacity:.95}
+  .psr-note{font-size:11px;opacity:.5;margin:0 2px 22px;line-height:1.6}
+  .psr-note a{color:#93b4ff}
   .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
   .toolbar button{background:#33406b;color:#fff;border:0;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:12px}
   .toolbar button:hover{background:#3f4f82}
@@ -181,29 +198,82 @@ PAGE = """
       <div class="s">incomings fees − outgoings proceeds</div></div>
   </div>
 
-  <div class="psr">
-    <div class="hd"><div class="t">PSR / FFP headroom</div>
-      <div class="s">3-year rolling allowable-loss model · simplified</div></div>
-    <div class="grp"><label>Allowable 3-yr loss (£m)</label>
-      <input id="psr-limit" type="number" step="5" value="105" oninput="updatePSR()"></div>
-    <div class="grp"><label>Assumed 3-yr loss pre-sales (£m)</label>
-      <input id="psr-loss" type="number" step="5" value="0" oninput="updatePSR()"></div>
-    <div class="grp"><label>Realized sale profit</label>
-      <div class="val pl-pos" id="psr-realized" style="font-size:20px">£0.0m</div></div>
-    <div class="res"><div class="lbl">Net PSR headroom</div>
-      <div class="val" id="psr-headroom" style="font-size:26px">£0.0m</div>
-      <div class="st" id="psr-status">—</div></div>
-    <div class="barwrap"><i id="psr-bar" style="width:0%"></i></div>
-    <div class="claw" id="psr-claw">Enter your estimated 3-yr operating loss to see net headroom.
-      Realized sale profit offsets losses £-for-£.</div>
+  <h2 class="sec">📋 Financial fair play — compliance <span class="secn">3-year rolling model from published accounts ({{ psr.window[0] }} → {{ psr.window[-1] }})</span></h2>
+  <div class="psr-grid">
+
+    <!-- Premier League PSR -->
+    <div class="pcard {{ 'ok' if psr.within else 'bad' }}">
+      <div class="pc-h"><span class="pc-t">🏴 Premier League PSR</span>
+        <span class="pc-chip {{ 'chip-ok' if psr.within else 'chip-bad' }}">{{ 'COMPLIANT' if psr.within else 'BREACH' }}</span></div>
+      <div class="pc-big {{ 'pl-pos' if psr.headroom>=0 else 'pl-neg' }}">£{{ psr.headroom }}m</div>
+      <div class="pc-sub">headroom under the £{{ psr.limit }}m 3-year allowable-loss limit</div>
+      <div class="pc-rows">
+        <div><span>3-yr reported loss</span><b class="pl-neg">−£{{ psr.reported_loss }}m</b></div>
+        <div><span>Allowable deductions <span style="opacity:.5">(depreciation, COVID, women's, academy)</span></span><b class="pl-pos">+£{{ psr.deductions }}m</b></div>
+        <div class="rule"><span>= Adjusted 3-yr result (pre-trading)</span><b class="{{ 'pl-pos' if psr.adjusted>=0 else 'pl-neg' }}">{{ '+' if psr.adjusted>=0 else '−' }}£{{ psr.adjusted|abs }}m</b></div>
+      </div>
+      <div class="pc-bar {{ 'over' if not psr.within else 'warn' if psr.used_pct>66 else '' }}"><i style="width:{{ psr.used_pct }}%"></i></div>
+      <div class="pc-cap"><span>{{ psr.used_pct }}% of loss budget used</span><span>limit £{{ psr.limit }}m</span></div>
+      <div class="pc-foot">
+        <b>This window's dealing (per the squad above):</b><br>
+        Confirmed sales book <b class="pl-pos">+£{{ psr.realized }}m</b> profit ·
+        new signings add <b class="pl-neg">−£{{ psr.new_amort }}m/yr</b> amortisation
+        = net <b class="{{ 'pl-pos' if psr.net_first_yr>=0 else 'pl-neg' }}">{{ '+' if psr.net_first_yr>=0 else '−' }}£{{ psr.net_first_yr|abs }}m</b> →
+        pro-forma adjusted <b>{{ '+' if psr.proj_adjusted>=0 else '−' }}£{{ psr.proj_adjusted|abs }}m</b>,
+        headroom <b>£{{ psr.proj_headroom }}m</b>.
+        <span style="opacity:.7">(Summer-window trades land in the 2026-27 assessment.)</span>
+      </div>
+    </div>
+
+    <!-- UEFA Football Earnings Rule -->
+    <div class="pcard {{ 'ok' if psr.uefa_within else 'bad' }}">
+      <div class="pc-h"><span class="pc-t">⭐ UEFA — Football Earnings</span>
+        <span class="pc-chip {{ 'chip-ok' if psr.uefa_within else 'chip-bad' }}">{{ 'COMPLIANT' if psr.uefa_within else 'BREACH' }}</span></div>
+      <div class="pc-big {{ 'pl-pos' if psr.uefa_margin>=0 else 'pl-neg' }}">€{{ psr.uefa_margin }}m</div>
+      <div class="pc-sub">below the allowable-loss threshold (UEFA's PSR equivalent)</div>
+      <div class="pc-rows">
+        <div><span>Adjusted 3-yr result</span><b class="{{ 'pl-pos' if psr.uefa_adj_eur>=0 else 'pl-neg' }}">{{ '+' if psr.uefa_adj_eur>=0 else '−' }}€{{ psr.uefa_adj_eur|abs }}m</b></div>
+        <div><span>Allowable loss (€{{ psr.uefa_base_eur }}m base + €{{ psr.uefa_equity_eur }}m equity)</span><b>€{{ psr.uefa_allow_eur }}m</b></div>
+        <div class="rule"><span>Max with equity uplift</span><b>€{{ psr.uefa_ext_eur }}m</b></div>
+      </div>
+      <div class="pc-bar {{ 'over' if not psr.uefa_within else 'warn' if psr.uefa_used_pct>66 else '' }}"><i style="width:{{ psr.uefa_used_pct }}%"></i></div>
+      <div class="pc-cap"><span>{{ psr.uefa_used_pct }}% of allowance used</span><span>allowed €{{ psr.uefa_allow_eur }}m</span></div>
+      <div class="pc-foot">Acceptable deviation is €5m, extendable toward €60m (up to €90m) with secure equity.
+        ENIC's <b>€{{ psr.uefa_equity_eur }}m</b> injection lifted Spurs' allowable loss to <b>€{{ psr.uefa_allow_eur }}m</b>,
+        and an adjusted <b>profit</b> leaves comfortable room.</div>
+    </div>
+
+    <!-- UEFA Squad Cost Control -->
+    <div class="pcard {{ 'ok' if psr.scr_within else 'bad' }}">
+      <div class="pc-h"><span class="pc-t">📊 UEFA — Squad Cost Control</span>
+        <span class="pc-chip {{ 'chip-ok' if psr.scr_within else 'chip-bad' }}">{{ '%.0f'|format(psr.scr) }}% / {{ psr.scr_cap }}%</span></div>
+      <div class="pc-big {{ 'pl-pos' if psr.scr_within else 'pl-neg' }}">{{ psr.scr }}%</div>
+      <div class="pc-sub">squad cost as % of revenue + sales, vs the {{ psr.scr_cap }}% cap ({{ psr.scr_anchor }})</div>
+      <div class="pc-rows">
+        <div><span>Player wages + amortisation + agents</span><b>£{{ psr.scr_player_wages }}m + £{{ psr.scr_amort }}m + £{{ psr.scr_agent }}m</b></div>
+        <div><span>÷ Revenue + player-sale profit</span><b>£{{ psr.scr_revenue }}m + £{{ psr.scr_sale_profit }}m</b></div>
+        <div class="rule"><span>= Squad cost ratio</span><b class="{{ 'pl-pos' if psr.scr_within else 'pl-neg' }}">{{ psr.scr }}%</b></div>
+      </div>
+      <div class="pc-bar {{ 'over' if not psr.scr_within else 'warn' if psr.scr_pct>85 else '' }}"><i style="width:{{ psr.scr_pct }}%"></i></div>
+      <div class="pc-cap"><span>{{ psr.scr_pct }}% of the {{ psr.scr_cap }}% cap</span><span>cap {{ psr.scr_cap }}%</span></div>
+      <div class="pc-foot">Caps player-related spend at {{ psr.scr_cap }}% of football revenue.
+        Layering this window's new-signing amortisation and sale profits gives a pro-forma
+        <b>{{ psr.proj_scr }}%</b> — still inside the cap.</div>
+    </div>
+
   </div>
+  <div class="psr-note">Reported figures from Tottenham's published accounts via
+    <a href="https://swissramble.substack.com/p/tottenham-hotspur-finances-202425" target="_blank" rel="noopener">The Swiss Ramble</a>
+    ({{ psr.window[0] }}–{{ psr.window[-1] }}). Allowable deductions are estimates reconciled to Swiss Ramble's published
+    3-year window totals (adjusted PSR ≈ +£{{ psr.reference.get('swissramble_through_2024-25', {}).get('adjusted_psr_gbp_m', '—') }}m through 2024-25).
+    A "simplified" model — real PSR/UEFA submissions carry adjustments not captured here. Edit <code>psr.json</code> to update.</div>
 
   <div class="toolbar">
-    {% if static %}<button class="share" onclick="shareScenario()">🔗 Share my scenario</button>{% endif %}
+    <button class="share" onclick="shareScenario()">🔗 Share my scenario</button>
     {% if not static %}<button class="add" onclick="toggleAdd()">➕ Add player</button>{% endif %}
     <button onclick="clearSales()">Clear sale prices</button>
     <button class="reset" onclick="resetAll()">Reset everything</button>
-    <span class="hint">{% if static %}Type sale prices &amp; tick a Sell XI, then share a link to your what-if — nothing is saved on the server.{% else %}Add a signing, reset agreed sale prices back to market value.{% endif %}</span>
+    <span class="hint">{% if static %}Type sale prices &amp; tick a Sell XI, then share a link to your what-if — nothing is saved on the server.{% else %}Share builds a link to the public site with your current what-if baked in. Add a signing, or reset agreed sale prices back to market value.{% endif %}</span>
   </div>
 
   {% if not static %}
@@ -491,34 +561,12 @@ function applyRow(inp, row){
 function applyTotals(t){
   const set=(id,v)=>{ const el=$(id); el.textContent='£'+Number(v).toFixed(1)+'m'; el.className='val '+plClass(v); };
   set('card-bp',t.bp); set('card-real',t.realized); set('card-unreal',t.unrealized);
-  realizedNow=t.realized; updatePSR();
+  realizedNow=t.realized;   // kept for recomputeTotals; PSR panel is server-computed from psr.json
 }
 
-// ---- PSR / FFP headroom (client-side scenario; inputs saved to localStorage) ----
+// Realized sale profit from confirmed Outgoings (fixed until a reload). The PSR /
+// UEFA compliance cards are rendered server-side from psr.json + book_value.compute_psr.
 let realizedNow = {{ t.realized }};
-function updatePSR(){
-  const limit=parseFloat($('psr-limit').value)||0;
-  const loss=parseFloat($('psr-loss').value)||0;
-  const headroom = limit - loss + realizedNow;       // room before breaching the limit
-  $('psr-realized').textContent='£'+realizedNow.toFixed(1)+'m';
-  const h=$('psr-headroom');
-  h.textContent=(headroom<0?'-£':'£')+Math.abs(headroom).toFixed(1)+'m';
-  h.className='val '+plClass(headroom);
-  $('psr-status').textContent = headroom>=0 ? 'within limit' : 'OVER limit — breach';
-  const pct = limit>0 ? Math.max(0,Math.min(100, realizedNow/limit*100)) : 0;
-  $('psr-bar').style.width=pct+'%';
-  $('psr-claw').textContent =
-    'Sales claw back £'+realizedNow.toFixed(1)+'m = '+pct.toFixed(0)+'% of the £'+limit.toFixed(0)+'m limit'
-    +' · net headroom = limit − assumed loss + realized sale profit.';
-  localStorage.setItem('psr', JSON.stringify({limit:$('psr-limit').value, loss:$('psr-loss').value}));
-}
-(function initPSR(){
-  try{ const s=JSON.parse(localStorage.getItem('psr')||'{}');
-    if(s.limit!==undefined) $('psr-limit').value=s.limit;
-    if(s.loss!==undefined) $('psr-loss').value=s.loss;
-  }catch(e){}
-  updatePSR();
-})();
 
 // ---- Shareable scenarios (state encoded in the URL ?s= param) ----
 let toastT;
@@ -531,11 +579,17 @@ function buildScenario(){
   const sel=[...document.querySelectorAll('.sel:checked')].map(cb=>cb.closest('tr').querySelector('.saleinp').dataset.player);
   return {sales, sel};
 }
+// On the public site, share the current page URL. Locally, point the link at the
+// deployed public site instead (a localhost link can't be shared) — same ?s= param,
+// decoded by loadScenario() on whichever site opens it.
+const SHARE_BASE = STATIC ? (location.origin+location.pathname) : {{ public_url|tojson }};
 function shareScenario(){
   const enc=btoa(unescape(encodeURIComponent(JSON.stringify(buildScenario()))));
-  const url=location.origin+location.pathname+'?s='+encodeURIComponent(enc);
-  history.replaceState(null,'',url);
-  if(navigator.clipboard) navigator.clipboard.writeText(url).then(()=>flash('Scenario link copied to clipboard!'),()=>prompt('Copy your link:',url));
+  const url=SHARE_BASE+'?s='+encodeURIComponent(enc);
+  // replaceState only works same-origin; skip it when the link is the remote public site.
+  if(SHARE_BASE.indexOf(location.origin)===0) history.replaceState(null,'',url);
+  const done=STATIC ? 'Scenario link copied to clipboard!' : 'Public share link copied to clipboard!';
+  if(navigator.clipboard) navigator.clipboard.writeText(url).then(()=>flash(done),()=>prompt('Copy your link:',url));
   else prompt('Copy your scenario link:',url);
 }
 async function clearSalesQuiet(){
@@ -552,7 +606,6 @@ async function resetAll(){
   await clearSalesQuiet();
   document.querySelectorAll('.sel:checked').forEach(c=>{ c.checked=false; c.closest('tr').classList.remove('selrow'); });
   recalc();
-  $('psr-limit').value=105; $('psr-loss').value=0; updatePSR();
   if(STATIC) history.replaceState(null,'',location.origin+location.pathname);
   flash('Everything reset to defaults');
 }
@@ -638,12 +691,13 @@ def index():
     rows = bv.load_players()
     parts = bv.partition(rows)
     totals = bv.compute_totals(rows)
+    psr = bv.compute_psr(rows)
     editmap = {} if PUBLIC else _edit_map()
     return render_template_string(
         PAGE, squad=parts["squad"], incomings=parts["incomings"],
-        outgoings=parts["outgoings"], t=totals, today=bv.TODAY,
+        outgoings=parts["outgoings"], t=totals, psr=psr, today=bv.TODAY,
         rate=bv.EUR_GBP, static=PUBLIC, editmap=editmap,
-        editnames=sorted(editmap),
+        editnames=sorted(editmap), public_url=PUBLIC_URL,
     )
 
 

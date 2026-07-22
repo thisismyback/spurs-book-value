@@ -1,0 +1,35 @@
+{
+  "_about": "Spurs financial-reporting inputs for the PSR / UEFA compliance model. Per-season reported figures are from the club's published accounts as summarised by The Swiss Ramble (2021-22 .. 2024-25). 'allowable_deductions_gbp_m' are ESTIMATES reconciled to Swiss Ramble's published 3-year window totals (see reference block); they are dominated by ~£60-70m/yr stadium & infrastructure depreciation plus COVID, women's-team, academy and community add-backs. Edit freely and re-run; nothing here is auto-generated. All GBP £m unless noted.",
+
+  "psr_limit_gbp_m": 105,
+  "psr_annual_deductible_note": "PL PSR max allowable loss = £105m over a rolling 3 seasons.",
+
+  "uefa": {
+    "football_earnings_base_limit_eur_m": 60,
+    "football_earnings_equity_extended_limit_eur_m": 90,
+    "equity_contribution_eur_m": 42,
+    "equity_extended_allowable_loss_eur_m": 47,
+    "squad_cost_ratio_cap_pct": 70,
+    "player_wage_share_of_total_pct": 73,
+    "agent_fees_gbp_m": 12,
+    "eur_gbp": 0.86,
+    "_note": "Football Earnings Rule = UEFA's PSR equivalent: max €5m loss, extendable toward €60m (and up to €90m) with equity. ENIC's £35m/€42m equity raised Spurs' allowable loss to €47m. Squad Cost Control caps (player wages + amortisation + agent fees) at 70% of (revenue + player-sale profit); player wages assumed 73% of the total wage bill per UEFA methodology; agent fees are a calibration estimate."
+  },
+
+  "seasons": [
+    {"season": "2021-22", "pretax_pnl_gbp_m": -61,  "allowable_deductions_gbp_m": 96, "player_sale_profit_gbp_m": 19, "wages_gbp_m": 209, "amortisation_gbp_m": 80,  "revenue_gbp_m": 443, "source": "reported"},
+    {"season": "2022-23", "pretax_pnl_gbp_m": -95,  "allowable_deductions_gbp_m": 92, "player_sale_profit_gbp_m": 16, "wages_gbp_m": 251, "amortisation_gbp_m": 109, "revenue_gbp_m": 550, "source": "reported"},
+    {"season": "2023-24", "pretax_pnl_gbp_m": -26,  "allowable_deductions_gbp_m": 90, "player_sale_profit_gbp_m": 82, "wages_gbp_m": 222, "amortisation_gbp_m": 136, "revenue_gbp_m": 528, "source": "reported"},
+    {"season": "2024-25", "pretax_pnl_gbp_m": -121, "allowable_deductions_gbp_m": 85, "player_sale_profit_gbp_m": 53, "wages_gbp_m": 256, "amortisation_gbp_m": 142, "revenue_gbp_m": 565, "source": "reported"},
+    {"season": "2025-26", "pretax_pnl_gbp_m": -90,  "allowable_deductions_gbp_m": 72, "player_sale_profit_gbp_m": 40, "wages_gbp_m": 262, "amortisation_gbp_m": 150, "revenue_gbp_m": 585, "source": "estimate"}
+  ],
+
+  "window_seasons": ["2022-23", "2023-24", "2024-25"],
+  "window_note": "The current published PSR monitoring window. Its newest season is the anchor for the squad-cost ratio and the season the live transfer overlay is compared against.",
+
+  "reference": {
+    "swissramble_through_2023-24": {"reported_loss_gbp_m": 182, "allowable_deductions_gbp_m": 278, "adjusted_psr_gbp_m": 96},
+    "swissramble_through_2024-25": {"reported_loss_gbp_m": 241, "allowable_deductions_gbp_m": 267, "adjusted_psr_gbp_m": 26, "headroom_stated_gbp_m": 141},
+    "_note": "Published Swiss Ramble window totals, kept for validation. compute_psr() reconciles the per-season deductions to these. NB Swiss Ramble's stated £141m headroom is internally inconsistent with their +£26m adjusted result and £105m limit (which imply ~£131m); the model computes limit + adjusted result."
+  }
+}

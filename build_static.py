@@ -14,6 +14,7 @@ import os
 from jinja2 import Template
 
 import book_value as bv
+import app
 from app import PAGE
 
 OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs")
@@ -24,10 +25,12 @@ def main():
     rows = bv.load_players()
     parts = bv.partition(rows)
     totals = bv.compute_totals(rows)
+    psr = bv.compute_psr(rows)
     html = Template(PAGE).render(
         squad=parts["squad"], incomings=parts["incomings"],
-        outgoings=parts["outgoings"], t=totals, today=bv.TODAY,
+        outgoings=parts["outgoings"], t=totals, psr=psr, today=bv.TODAY,
         rate=bv.EUR_GBP, static=True, editmap={}, editnames=[],
+        public_url=app.PUBLIC_URL,
     )
     os.makedirs(OUT_DIR, exist_ok=True)
     with open(OUT_FILE, "w", encoding="utf-8") as f:
